@@ -7,7 +7,11 @@ import { PrismaClient } from "../src/generated/prisma/client";
 async function main() {
   const username = process.env.ADMIN_USERNAME?.trim().toLowerCase();
   const password = process.env.ADMIN_PASSWORD;
-  if (!username || !password) throw new Error("Set ADMIN_USERNAME and ADMIN_PASSWORD in .env");
+  if (!username || !password) {
+    // Don't fail a deploy over this; the admin can be created on a later run.
+    console.warn("ADMIN_USERNAME / ADMIN_PASSWORD not set, skipping admin creation.");
+    return;
+  }
 
   const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }) });
   const existing = await prisma.user.findUnique({ where: { username } });
