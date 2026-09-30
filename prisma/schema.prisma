@@ -1,0 +1,55 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  PLAYER
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  displayName  String
+  passwordHash String
+  role         Role     @default(PLAYER)
+  createdAt    DateTime @default(now())
+
+  results         Result[]
+  createdSessions GameSession[]
+}
+
+/// One night of poker.
+model GameSession {
+  id          String   @id @default(cuid())
+  playedAt    DateTime @db.Date
+  location    String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  createdById String
+
+  createdBy User     @relation(fields: [createdById], references: [id])
+  results   Result[]
+
+  @@index([playedAt])
+}
+
+/// One player's result in one session. Amounts are integer cents; net = cashOut - buyIn.
+model Result {
+  id        String @id @default(cuid())
+  sessionId String
+  userId    String
+  buyIn     Int
+  cashOut   Int
+
+  session GameSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User        @relation(fields: [userId], references: [id])
+
+  @@unique([sessionId, userId])
+  @@index([userId])
+}
