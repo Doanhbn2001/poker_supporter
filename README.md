@@ -43,7 +43,11 @@ There is no public sign-up. The admin adds friends on the **Players** page with 
 
 ## Deploying to Vercel
 
-Import the repo in Vercel, add `DATABASE_URL` and `SESSION_SECRET` as environment variables, and run `npm run db:deploy` and `npm run db:seed` once against the production database.
+1. Import the repo in Vercel (production branch `BMI`).
+2. In the project, open **Storage** and create a **Neon** Postgres database. This adds `DATABASE_URL` and `DATABASE_URL_UNPOOLED`.
+3. Add `SESSION_SECRET`, `ADMIN_USERNAME` and `ADMIN_PASSWORD` under **Settings → Environment Variables**, then redeploy.
+
+Vercel runs `npm run vercel-build`, which applies migrations and creates the admin account (if missing) before building, so there's nothing to run by hand.
 
 ## Data model
 

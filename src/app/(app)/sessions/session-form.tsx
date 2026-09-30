@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { createGameSession } from "@/app/actions/sessions";
+import type { SessionFormState } from "@/app/actions/sessions";
 import { Button, Card, FormMessage, Input, Label, Money, Select } from "@/components/ui";
 import { toCents } from "@/lib/money";
 
@@ -11,14 +11,34 @@ type Row = { key: number; playerId: string; buyIn: string; cashOut: string };
 let nextKey = 0;
 const newRow = (playerId = ""): Row => ({ key: nextKey++, playerId, buyIn: "", cashOut: "" });
 
-export function SessionForm({ players, defaultPlayerId }: { players: Player[]; defaultPlayerId: string }) {
-  const [state, action, pending] = useActionState(createGameSession, undefined);
-  const [rows, setRows] = useState<Row[]>(() => [newRow(defaultPlayerId), newRow()]);
+export type SessionFormValues = {
+  playedAt: string;
+  location: string;
+  notes: string;
+  results: { playerId: string; buyIn: string; cashOut: string }[];
+};
+
+type Props = {
+  players: Player[];
+  action: (state: SessionFormState, formData: FormData) => Promise<SessionFormState>;
+  /** Existing session when editing; otherwise the form starts with the current user and one empty row. */
+  initial?: SessionFormValues;
+  defaultPlayerId?: string;
+  submitLabel?: string;
+};
+
+export function SessionForm({ players, action: submit, initial, defaultPlayerId = "", submitLabel = "Save session" }: Props) {
+  const [state, action, pending] = useActionState(submit, undefined);
+  const [rows, setRows] = useState<Row[]>(() =>
+    initial
+      ? initial.results.map((r) => ({ ...newRow(r.playerId), buyIn: r.buyIn, cashOut: r.cashOut }))
+      : [newRow(defaultPlayerId), newRow()],
+  );
   // Controlled so React's automatic form reset doesn't wipe them when the server returns an error.
   const [meta, setMeta] = useState(() => ({
-    playedAt: new Date().toLocaleDateString("en-CA"), // YYYY-MM-DD in local time
-    location: "",
-    notes: "",
+    playedAt: initial?.playedAt ?? new Date().toLocaleDateString("en-CA"), // YYYY-MM-DD in local time
+    location: initial?.location ?? "",
+    notes: initial?.notes ?? "",
   }));
 
   const update = (key: number, patch: Partial<Row>) =>
@@ -90,7 +110,7 @@ export function SessionForm({ players, defaultPlayerId }: { players: Player[]; d
 
       <FormMessage error={state?.error} />
       <Button type="submit" disabled={pending}>
-        {pending ? "Saving…" : "Save session"}
+        {pending ? "Saving…" : submitLabel}
       </Button>
     </form>
   );

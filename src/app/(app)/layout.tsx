@@ -13,8 +13,11 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
             ♠ Poker Supporter
           </Link>
           <Link href="/">Dashboard</Link>
-          <Link href="/sessions/new">Log session</Link>
-          {user.role === "ADMIN" && <Link href="/players">Players</Link>}
+          <Link href="/sessions">Sessions</Link>
+          <Link href="/players">Players</Link>
+          <Link href="/sessions/new" className="font-medium text-emerald-600">
+            + Log session
+          </Link>
           <span className="ml-auto flex items-center gap-4">
             <Link href="/account" className="text-neutral-500">
               {user.displayName}

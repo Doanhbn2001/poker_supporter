@@ -22,3 +22,32 @@ body {
   color: var(--foreground);
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
+
+/* Chart colors: categorical slots in fixed order, plus the win/loss poles. */
+:root {
+  --chart-grid: #e5e5e5;
+  --chart-axis: #737373;
+  --chart-surface: #ffffff;
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --series-5: #e87ba4;
+  --chart-win: #2a78d6;
+  --chart-loss: #e34948;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --chart-grid: #262626;
+    --chart-axis: #a3a3a3;
+    --chart-surface: #171717;
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+    --series-5: #d55181;
+    --chart-win: #3987e5;
+    --chart-loss: #e66767;
+  }
+}
