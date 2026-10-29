@@ -15,6 +15,7 @@ export default async function SessionPage({ params }: PageProps<"/sessions/[id]"
     where: { id },
     include: {
       createdBy: { select: { displayName: true } },
+      champion: { select: { id: true, displayName: true } },
       results: { include: { user: { select: { id: true, displayName: true } } } },
     },
   });
@@ -25,7 +26,7 @@ export default async function SessionPage({ params }: PageProps<"/sessions/[id]"
     .sort((a, b) => b.net - a.net);
   const totalIn = results.reduce((t, r) => t + r.buyIn, 0);
   const totalOut = results.reduce((t, r) => t + r.cashOut, 0);
-  const canEdit = me.role === "ADMIN" || session.createdById === me.id;
+  const canEdit = me.role === "ADMIN";
 
   return (
     <div className="space-y-6">
@@ -39,6 +40,14 @@ export default async function SessionPage({ params }: PageProps<"/sessions/[id]"
             {session.location && <span className="text-neutral-500"> · {session.location}</span>}
           </h1>
           <p className="text-sm text-neutral-500">Logged by {session.createdBy.displayName}</p>
+          {session.champion && (
+            <p className="mt-1 text-sm">
+              👑 Champion:{" "}
+              <Link href={`/players/${session.champion.id}`} className="font-medium hover:underline">
+                {session.champion.displayName}
+              </Link>
+            </p>
+          )}
         </div>
         {canEdit && (
           <div className="flex items-center gap-4 text-sm">

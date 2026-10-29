@@ -11,6 +11,7 @@ type Props = {
     pot: number;
     players: number;
     winner?: { name: string; net: number };
+    champion: string | null;
   };
 };
 
@@ -25,6 +26,7 @@ export function SessionCard({ session: s }: Props) {
           </div>
           <div className="text-sm text-neutral-500">
             {s.players} players · {formatMoney(s.pot)} total buy-ins
+            {s.champion && <> · 👑 {s.champion}</>}
           </div>
         </div>
         {s.winner && (

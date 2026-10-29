@@ -1,6 +1,11 @@
 @import "tailwindcss";
 
+/* Theme is chosen by data-theme on <html> (see the inline script in app/layout.tsx), not the OS setting. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 :root {
+  /* Native controls (date picker, select menus) follow the chosen theme. */
+  color-scheme: light;
   --background: #fafafa;
   --foreground: #171717;
 }
@@ -10,11 +15,10 @@
   --color-foreground: var(--foreground);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #0a0a0a;
+  --foreground: #ededed;
 }
 
 body {
@@ -33,21 +37,29 @@ body {
   --series-3: #1baf7a;
   --series-4: #eda100;
   --series-5: #e87ba4;
+  --series-6: #7c5cd6;
+  --series-7: #1597b8;
+  --series-8: #a8662a;
+  --series-9: #6f9f1a;
+  --series-10: #6b7a8f;
   --chart-win: #2a78d6;
   --chart-loss: #e34948;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --chart-grid: #262626;
-    --chart-axis: #a3a3a3;
-    --chart-surface: #171717;
-    --series-1: #3987e5;
-    --series-2: #d95926;
-    --series-3: #199e70;
-    --series-4: #c98500;
-    --series-5: #d55181;
-    --chart-win: #3987e5;
-    --chart-loss: #e66767;
-  }
+[data-theme="dark"] {
+  --chart-grid: #262626;
+  --chart-axis: #a3a3a3;
+  --chart-surface: #171717;
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --series-5: #d55181;
+  --series-6: #9d7ff0;
+  --series-7: #2bb0d1;
+  --series-8: #c3814a;
+  --series-9: #88bd2e;
+  --series-10: #8d9bb0;
+  --chart-win: #3987e5;
+  --chart-loss: #e66767;
 }

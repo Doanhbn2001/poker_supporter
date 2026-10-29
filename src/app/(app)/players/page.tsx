@@ -9,7 +9,8 @@ export default async function PlayersPage() {
   const me = await requireUser();
   const [players, leaderboard] = await Promise.all([
     prisma.user.findMany({
-      select: { id: true, username: true, displayName: true, role: true },
+      where: { role: "PLAYER" },
+      select: { id: true, username: true, displayName: true, crowns: true, _count: { select: { championships: true } } },
       orderBy: { displayName: "asc" },
     }),
     getLeaderboard(),
@@ -24,6 +25,7 @@ export default async function PlayersPage() {
         <Card className="divide-y divide-neutral-100 p-0 dark:divide-neutral-800">
           {players.map((p) => {
             const stats = netById.get(p.id);
+            const crowns = p.crowns + p._count.championships;
             return (
               <Link
                 key={p.id}
@@ -32,10 +34,10 @@ export default async function PlayersPage() {
               >
                 <span>
                   <span className="font-medium">{p.displayName}</span>
+                  {crowns > 0 && <span title="Crowns"> 👑×{crowns}</span>}
                   <span className="text-neutral-500">
                     {" "}
                     @{p.username}
-                    {p.role === "ADMIN" && " · admin"}
                   </span>
                 </span>
                 <span className="text-right">

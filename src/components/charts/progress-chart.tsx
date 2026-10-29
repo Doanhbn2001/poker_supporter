@@ -4,13 +4,13 @@ import { useState } from "react";
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { axisProps, ChartTooltip, moneyTick, shortDate } from "./chart-tooltip";
 
-const SLOTS = ["var(--series-1)", "var(--series-2)", "var(--series-3)", "var(--series-4)", "var(--series-5)"];
+const SLOTS = Array.from({ length: 10 }, (_, i) => `var(--series-${i + 1})`);
 const MAX_SELECTED = SLOTS.length;
 
 type Player = { id: string; name: string; net: number };
 
 /**
- * Running profit per player. Up to five players at a time; each keeps its color
+ * Running profit per player. Up to ten players at a time; each keeps its color
  * while selected, so toggling someone else never repaints the others.
  */
 export function ProgressChart({ points, players }: { points: Record<string, number | string>[]; players: Player[] }) {
@@ -65,7 +65,7 @@ export function ProgressChart({ points, players }: { points: Record<string, numb
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={points} margin={{ top: 8, right: 16, bottom: 0, left: 8 }}>
             <CartesianGrid vertical={false} stroke="var(--chart-grid)" />
-            <XAxis dataKey="date" tickFormatter={shortDate} minTickGap={24} {...axisProps} />
+            <XAxis dataKey="x" tickFormatter={(x: number) => shortDate(String(points[x]?.date ?? ""))} minTickGap={24} {...axisProps} />
             <YAxis tickFormatter={moneyTick} width={56} {...axisProps} />
             <ReferenceLine y={0} stroke="var(--chart-axis)" strokeOpacity={0.5} />
             <Tooltip content={<ChartTooltip names={names} />} cursor={{ stroke: "var(--chart-axis)", strokeDasharray: "3 3" }} />

@@ -12,7 +12,7 @@ const PlayerSchema = z.object({
     .trim()
     .toLowerCase()
     .regex(/^[a-z0-9_]{3,20}$/, { error: "Username: 3-20 letters, numbers or _." }),
-  displayName: z.string().trim().min(1, { error: "Enter a display name." }).max(40),
+  displayName: z.string().trim().min(1, { error: "Enter a poker name." }).max(40),
   password: z.string().min(8, { error: "Password must be at least 8 characters." }),
 });
 
@@ -40,6 +40,30 @@ export async function createPlayer(_state: FormState, formData: FormData): Promi
   });
   revalidatePath("/players");
   return { success: `Added ${displayName}.` };
+}
+
+const ProfileSchema = z.object({
+  displayName: z.string().trim().min(1, { error: "Enter a poker name." }).max(40, { error: "Poker name: 40 characters max." }),
+  motto: z.string().trim().max(160, { error: "Motto: 160 characters max." }),
+});
+
+export async function updateProfile(_state: FormState, formData: FormData): Promise<FormState> {
+  const me = await requireUser();
+
+  const values = {
+    displayName: String(formData.get("displayName") ?? ""),
+    motto: String(formData.get("motto") ?? ""),
+  };
+  const parsed = ProfileSchema.safeParse(values);
+  if (!parsed.success) return { error: parsed.error.issues[0].message, values };
+
+  await prisma.user.update({
+    where: { id: me.id },
+    data: { displayName: parsed.data.displayName, motto: parsed.data.motto || null },
+  });
+  // The poker name shows in the top bar and every leaderboard/session page.
+  revalidatePath("/", "layout");
+  return { success: "Profile saved.", values: parsed.data };
 }
 
 const PasswordSchema = z.object({

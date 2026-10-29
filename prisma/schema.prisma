@@ -13,15 +13,23 @@ enum Role {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  username     String   @unique
-  displayName  String
-  passwordHash String
-  role         Role     @default(PLAYER)
-  createdAt    DateTime @default(now())
+  id             String   @id @default(cuid())
+  username       String   @unique
+  /// Poker name shown everywhere in the app; the player can change it.
+  displayName    String
+  /// Playing motto, set by the player.
+  motto          String?
+  passwordHash   String
+  role           Role     @default(PLAYER)
+  /// Titles won before sessions recorded a champion (imported). Total crowns = this + championships.
+  crowns         Int      @default(0)
+  /// Profit carried over from before sessions were tracked, in cents. Counts toward net, not per-session stats.
+  openingBalance Int      @default(0)
+  createdAt      DateTime @default(now())
 
   results         Result[]
-  createdSessions GameSession[]
+  createdSessions GameSession[] @relation("SessionCreator")
+  championships   GameSession[] @relation("SessionChampion")
 }
 
 /// One night of poker.
@@ -32,8 +40,11 @@ model GameSession {
   notes       String?
   createdAt   DateTime @default(now())
   createdById String
+  /// Winner of the session, if any. Each one adds a crown to that player.
+  championId  String?
 
-  createdBy User     @relation(fields: [createdById], references: [id])
+  createdBy User     @relation("SessionCreator", fields: [createdById], references: [id])
+  champion  User?    @relation("SessionChampion", fields: [championId], references: [id], onDelete: SetNull)
   results   Result[]
 
   @@index([playedAt])

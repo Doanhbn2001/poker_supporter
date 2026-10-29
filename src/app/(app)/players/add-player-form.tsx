@@ -10,7 +10,7 @@ export function AddPlayerForm() {
   return (
     <form action={action} className="space-y-4" key={state?.success}>
       <div>
-        <Label htmlFor="displayName">Display name</Label>
+        <Label htmlFor="displayName">Poker name</Label>
         <Input id="displayName" name="displayName" required defaultValue={state?.values?.displayName} />
       </div>
       <div>

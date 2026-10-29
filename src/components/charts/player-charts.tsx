@@ -15,7 +15,8 @@ import {
 } from "recharts";
 import { axisProps, ChartTooltip, moneyTick, shortDate } from "./chart-tooltip";
 
-type Point = { date: string; net: number; total: number };
+/** `x` is the point's position; the axis is keyed by it because sessions can share a date. */
+type Point = { x: number; date: string; label: string; net: number; total: number };
 
 export function CumulativeChart({ data }: { data: Point[] }) {
   return (
@@ -23,7 +24,7 @@ export function CumulativeChart({ data }: { data: Point[] }) {
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={{ top: 8, right: 16, bottom: 0, left: 8 }}>
           <CartesianGrid vertical={false} stroke="var(--chart-grid)" />
-          <XAxis dataKey="date" tickFormatter={shortDate} minTickGap={24} {...axisProps} />
+          <XAxis dataKey="x" tickFormatter={(x: number) => shortDate(data[x]?.date ?? "")} minTickGap={24} {...axisProps} />
           <YAxis tickFormatter={moneyTick} width={56} {...axisProps} />
           <ReferenceLine y={0} stroke="var(--chart-axis)" strokeOpacity={0.5} />
           <Tooltip content={<ChartTooltip names={{ total: "Total" }} />} cursor={{ stroke: "var(--chart-axis)", strokeDasharray: "3 3" }} />
@@ -48,7 +49,7 @@ export function SessionResultsChart({ data }: { data: Point[] }) {
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 8, right: 16, bottom: 0, left: 8 }} barCategoryGap={2}>
           <CartesianGrid vertical={false} stroke="var(--chart-grid)" />
-          <XAxis dataKey="date" tickFormatter={shortDate} minTickGap={24} {...axisProps} />
+          <XAxis dataKey="x" tickFormatter={(x: number) => shortDate(data[x]?.date ?? "")} minTickGap={24} {...axisProps} />
           <YAxis tickFormatter={moneyTick} width={56} {...axisProps} />
           <ReferenceLine y={0} stroke="var(--chart-axis)" />
           <Tooltip content={<ChartTooltip names={{ net: "Result" }} />} cursor={{ fill: "var(--chart-grid)", fillOpacity: 0.5 }} />

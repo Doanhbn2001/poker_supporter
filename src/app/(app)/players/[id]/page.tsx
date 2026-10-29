@@ -22,11 +22,13 @@ export default async function PlayerPage({ params }: PageProps<"/players/[id]">)
   await requireUser();
   const player = await prisma.user.findUnique({
     where: { id },
-    select: { displayName: true, username: true },
+    select: { displayName: true, username: true, motto: true, crowns: true, openingBalance: true, _count: { select: { championships: true } } },
   });
   if (!player) notFound();
 
-  const history = await getPlayerHistory(id);
+  const opening = player.openingBalance;
+  const crowns = player.crowns + player._count.championships;
+  const history = await getPlayerHistory(id, opening);
   const stats = statsFromHistory(history);
 
   return (
@@ -36,15 +38,32 @@ export default async function PlayerPage({ params }: PageProps<"/players/[id]">)
           ← All players
         </Link>
         <h1 className="mt-1 text-xl font-semibold">{player.displayName}</h1>
-        <p className="text-sm text-neutral-500">@{player.username}</p>
+        <p className="text-sm text-neutral-500">
+          @{player.username}
+          {crowns > 0 && ` · 👑 ${crowns} crown${crowns > 1 ? "s" : ""}`}
+        </p>
+        {player.motto && <p className="mt-2 text-sm italic text-neutral-600 dark:text-neutral-300">“{player.motto}”</p>}
       </div>
 
+      {opening !== 0 && !stats && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <Stat label="Net profit"><Money cents={opening} /></Stat>
+          <Stat label="Opening balance"><Money cents={opening} /></Stat>
+        </div>
+      )}
       {!stats ? (
         <Card className="text-center text-neutral-500">No sessions yet.</Card>
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Stat label="Net profit"><Money cents={stats.net} /></Stat>
+            <Stat label="Net profit">
+              <Money cents={opening + stats.net} />
+              {opening !== 0 && (
+                <div className="text-xs font-normal text-neutral-500">
+                  incl. <Money cents={opening} /> opening balance
+                </div>
+              )}
+            </Stat>
             <Stat label="Sessions">{stats.sessions}</Stat>
             <Stat label="Win rate">{Math.round((stats.wins / stats.sessions) * 100)}%</Stat>
             <Stat label="Avg / session"><Money cents={Math.round(stats.net / stats.sessions)} /></Stat>
@@ -98,6 +117,13 @@ export default async function PlayerPage({ params }: PageProps<"/players/[id]">)
                       <td className="px-4 py-2 text-right"><Money cents={h.total} /></td>
                     </tr>
                   ))}
+                  {opening !== 0 && (
+                    <tr className="text-neutral-500">
+                      <td className="px-4 py-2" colSpan={3}>Opening balance</td>
+                      <td className="px-4 py-2 text-right"><Money cents={opening} /></td>
+                      <td className="px-4 py-2 text-right"><Money cents={opening} /></td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </Card>

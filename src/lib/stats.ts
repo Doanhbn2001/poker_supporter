@@ -5,44 +5,48 @@ export type PlayerStats = {
   userId: string;
   displayName: string;
   sessions: number;
+  /** Opening balance plus every session. */
   net: number;
+  /** Sessions only; use this for per-session averages. */
+  sessionNet: number;
   wins: number;
-  best: number;
-  worst: number;
+  /** Imported titles plus sessions won. */
+  crowns: number;
+  /** Null when the player has an opening balance but no sessions yet. */
+  best: number | null;
+  worst: number | null;
 };
 
-type NetResult = { userId: string; displayName: string; net: number };
-
-function summarize(results: NetResult[]): PlayerStats[] {
-  const byPlayer = new Map<string, PlayerStats>();
-  for (const r of results) {
-    const s = byPlayer.get(r.userId) ?? {
-      userId: r.userId,
-      displayName: r.displayName,
-      sessions: 0,
-      net: 0,
-      wins: 0,
-      best: r.net,
-      worst: r.net,
-    };
-    s.sessions += 1;
-    s.net += r.net;
-    if (r.net > 0) s.wins += 1;
-    s.best = Math.max(s.best, r.net);
-    s.worst = Math.min(s.worst, r.net);
-    byPlayer.set(r.userId, s);
-  }
-  return [...byPlayer.values()].sort((a, b) => b.net - a.net);
-}
-
-/** Per-player totals across every session, sorted by net profit. */
+/** Per-player totals sorted by net profit. Includes anyone with sessions or an opening balance. */
 export async function getLeaderboard(): Promise<PlayerStats[]> {
-  const results = await prisma.result.findMany({
-    select: { userId: true, buyIn: true, cashOut: true, user: { select: { displayName: true } } },
+  const users = await prisma.user.findMany({
+    select: {
+      id: true,
+      displayName: true,
+      openingBalance: true,
+      crowns: true,
+      _count: { select: { championships: true } },
+      results: { select: { buyIn: true, cashOut: true } },
+    },
   });
-  return summarize(
-    results.map((r) => ({ userId: r.userId, displayName: r.user.displayName, net: r.cashOut - r.buyIn })),
-  );
+  return users
+    .filter((u) => u.results.length > 0 || u.openingBalance !== 0)
+    .map((u) => {
+      const nets = u.results.map((r) => r.cashOut - r.buyIn);
+      const sessionNet = nets.reduce((a, b) => a + b, 0);
+      return {
+        userId: u.id,
+        displayName: u.displayName,
+        sessions: nets.length,
+        net: u.openingBalance + sessionNet,
+        sessionNet,
+        wins: nets.filter((n) => n > 0).length,
+        crowns: u.crowns + u._count.championships,
+        best: nets.length > 0 ? Math.max(...nets) : null,
+        worst: nets.length > 0 ? Math.min(...nets) : null,
+      };
+    })
+    .sort((a, b) => b.net - a.net);
 }
 
 /** Sessions newest first, with a short summary of each. */
@@ -52,6 +56,7 @@ export async function getSessions(take?: number) {
     take,
     include: {
       results: { include: { user: { select: { displayName: true } } } },
+      champion: { select: { displayName: true } },
     },
   });
   return sessions.map((s) => {
@@ -65,30 +70,48 @@ export async function getSessions(take?: number) {
       pot: s.results.reduce((sum, r) => sum + r.buyIn, 0),
       winner: results[0],
       players: results.length,
+      champion: s.champion?.displayName ?? null,
     };
   });
 }
 
-export type ProgressPoint = { date: string; [userId: string]: number | string };
+/** Number of sessions on each date (YYYY-MM-DD), optionally leaving one session out. */
+export async function getCupsByDate(excludeId?: string): Promise<Record<string, number>> {
+  const groups = await prisma.gameSession.groupBy({
+    by: ["playedAt"],
+    where: excludeId ? { id: { not: excludeId } } : undefined,
+    _count: { _all: true },
+  });
+  return Object.fromEntries(groups.map((g) => [g.playedAt.toISOString().slice(0, 10), g._count._all]));
+}
+
+/**
+ * `x` is the point's position and the chart's x-axis key: several sessions can share a date
+ * (Cup 1 / Cup 2), so keying the axis by date would make the tooltip pick the wrong point.
+ */
+export type ProgressPoint = { x: number; date: string; label: string; [userId: string]: number | string };
 
 /**
  * Running profit for every player, one point per session in date order.
- * A player's line carries its last value through sessions they skipped.
+ * A player's line starts from their opening balance and carries its last value through sessions they skipped.
  */
 export async function getProgress() {
   const sessions = await prisma.gameSession.findMany({
     orderBy: [{ playedAt: "asc" }, { createdAt: "asc" }],
     select: {
       playedAt: true,
+      notes: true,
       results: { select: { userId: true, buyIn: true, cashOut: true } },
     },
   });
-  const users = await prisma.user.findMany({ select: { id: true, displayName: true } });
+  const users = await prisma.user.findMany({ select: { id: true, displayName: true, openingBalance: true } });
 
-  const running: Record<string, number> = {};
-  const points: ProgressPoint[] = sessions.map((s) => {
+  const running: Record<string, number> = Object.fromEntries(
+    users.filter((u) => u.openingBalance !== 0).map((u) => [u.id, u.openingBalance]),
+  );
+  const points: ProgressPoint[] = sessions.map((s, x) => {
     for (const r of s.results) running[r.userId] = (running[r.userId] ?? 0) + r.cashOut - r.buyIn;
-    return { date: s.playedAt.toISOString().slice(0, 10), ...running };
+    return { ...running, x, date: s.playedAt.toISOString().slice(0, 10), label: s.notes ?? "" };
   });
 
   const players = users
@@ -98,14 +121,14 @@ export async function getProgress() {
   return { points, players };
 }
 
-/** One player's sessions in date order, with running profit. */
-export async function getPlayerHistory(userId: string) {
+/** One player's sessions in date order, with running profit starting from `openingBalance`. */
+export async function getPlayerHistory(userId: string, openingBalance = 0) {
   const results = await prisma.result.findMany({
     where: { userId },
     select: {
       buyIn: true,
       cashOut: true,
-      session: { select: { id: true, playedAt: true, location: true, createdAt: true } },
+      session: { select: { id: true, playedAt: true, location: true, notes: true, createdAt: true } },
     },
   });
   results.sort(
@@ -114,13 +137,15 @@ export async function getPlayerHistory(userId: string) {
       a.session.createdAt.getTime() - b.session.createdAt.getTime(),
   );
 
-  let total = 0;
-  return results.map((r) => {
+  let total = openingBalance;
+  return results.map((r, x) => {
     const net = r.cashOut - r.buyIn;
     total += net;
     return {
+      x,
       sessionId: r.session.id,
       date: r.session.playedAt.toISOString().slice(0, 10),
+      label: r.session.notes ?? "",
       location: r.session.location,
       buyIn: r.buyIn,
       cashOut: r.cashOut,
