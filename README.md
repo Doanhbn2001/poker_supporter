@@ -24,6 +24,12 @@ A small web app for our weekend poker group: log each session's buy-ins and cash
    npm run dev
    ```
    Open http://localhost:3000 and sign in as the admin.
+5. (Optional) Fill the empty database with fake players and games:
+   ```bash
+   npm run db:seed-demo
+   ```
+
+Want to contribute? See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Accounts
 
@@ -39,6 +45,7 @@ There is no public sign-up. The admin adds friends on the **Players** page with 
 | `npm run db:migrate` | Create/apply migrations in development |
 | `npm run db:deploy` | Apply migrations in production |
 | `npm run db:seed` | Create the admin account from `.env` |
+| `npm run db:seed-demo` | Fill an empty database with fake players and games |
 | `npm run db:studio` | Browse the database in Prisma Studio |
 
 ## Deploying to Vercel

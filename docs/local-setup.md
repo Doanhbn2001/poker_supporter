@@ -21,7 +21,8 @@ npm run dev                   # http://localhost:3000
 | Tài khoản | Mật khẩu |
 |---|---|
 | `admin` | giá trị `ADMIN_PASSWORD` trong `.env` |
-| player (`tlong`, `clong`, `doanh`, `quan`, `duy`, `hieu`, `mai`, `hung`, `truong`, `duc`) | `12345678` |
+| player tạo bằng `npm run db:import` | giá trị `IMPORT_DEFAULT_PASSWORD` trong `.env` |
+| player tạo bằng `npm run db:seed-demo` (data giả) | in ra khi chạy lệnh |
 
 ## Setup từ đầu (máy mới / đã xoá DB)
 

@@ -22,8 +22,8 @@ type History = {
 };
 
 const DATA_FILE = "prisma/data/history.json";
-/** Every imported player starts with this password; they can change it on the Account page. */
-const DEFAULT_PASSWORD = "12345678";
+/** Players created by the import start with this password (from the env); they change it on /account. */
+const DEFAULT_PASSWORD = process.env.IMPORT_DEFAULT_PASSWORD ?? "";
 const apply = process.argv.includes("--apply");
 
 async function main() {
@@ -100,6 +100,9 @@ async function main() {
     if (!apply) {
       console.log("\nDry run, nothing written. Re-run with --apply to import.");
       return;
+    }
+    if (existingUsers.size < usernames.size && DEFAULT_PASSWORD.length < 8) {
+      throw new Error("New players need a starting password: set IMPORT_DEFAULT_PASSWORD (8+ characters).");
     }
 
     const passwordHash = await bcrypt.hash(DEFAULT_PASSWORD, 10);

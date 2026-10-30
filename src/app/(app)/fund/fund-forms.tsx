@@ -53,7 +53,7 @@ export function TransactionForm({ players, ids }: { players: { id: string; displ
       </div>
       <div>
         <Label htmlFor="note">Note (optional)</Label>
-        <Input id="note" name="note" maxLength={100} placeholder="e.g. Mai đưa Trường 500" />
+        <Input id="note" name="note" maxLength={100} placeholder="e.g. An đưa Bình 500" />
       </div>
       <FormMessage error={state?.error} success={success} />
       <Button type="submit" disabled={pending}>{pending ? "Saving…" : "Record"}</Button>
