@@ -46,7 +46,7 @@ export default async function PlayersPage() {
                       <Money cents={stats.net} />
                       <span className="text-neutral-500">
                         {" "}
-                        · {stats.cups} cups · {stats.cashGames} cash
+                        · {stats.cups} tours · {stats.cashGames} cash
                       </span>
                     </>
                   ) : (

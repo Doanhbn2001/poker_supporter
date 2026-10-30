@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CumulativeChart, SessionResultsChart } from "@/components/charts/player-charts";
-import { Card, Money } from "@/components/ui";
+import { CollapsibleSection } from "@/components/collapsible-section";
+import { Card, Money, TableCard } from "@/components/ui";
 import { requireUser } from "@/lib/dal";
 import { formatDate } from "@/lib/dates";
 import { GAME, type GameKind } from "@/lib/games";
@@ -20,16 +21,15 @@ function Stat({ label, children }: { label: string; children: React.ReactNode })
 
 type History = Awaited<ReturnType<typeof getPlayerHistory>>;
 
-/** Stats, charts and history for one kind of game. Cash includes the opening balance, tour doesn't. */
+/** Stats, charts and history for one kind of game. Cash includes the opening balance, cups don't. */
 function KindSection({ kind, history, opening }: { kind: GameKind; history: History; opening: number }) {
   const game = GAME[kind];
   const stats = statsFromHistory(history);
-  const title = kind === "CUP" ? "Tour" : "Cash";
+  const title = game.plural;
 
   if (!stats) {
     return (
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">{title}</h2>
+      <CollapsibleSection title={title}>
         {opening !== 0 ? (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Stat label="Profit"><Money cents={opening} /></Stat>
@@ -38,14 +38,13 @@ function KindSection({ kind, history, opening }: { kind: GameKind; history: Hist
         ) : (
           <Card className="text-center text-neutral-500">No {game.plural.toLowerCase()} yet.</Card>
         )}
-      </section>
+      </CollapsibleSection>
     );
   }
 
   const streak = stats.streak;
   return (
-    <section className="space-y-4">
-      <h2 className="text-lg font-semibold">{title}</h2>
+    <CollapsibleSection title={title} className="space-y-4">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Stat label="Profit">
           <Money cents={opening + stats.net} />
@@ -79,7 +78,7 @@ function KindSection({ kind, history, opening }: { kind: GameKind; history: Hist
         </Card>
       </div>
 
-      <Card className="overflow-x-auto p-0">
+      <TableCard>
         <table className="w-full text-sm">
           <thead className="text-left text-neutral-500">
             <tr className="border-b border-neutral-200 dark:border-neutral-800">
@@ -114,8 +113,8 @@ function KindSection({ kind, history, opening }: { kind: GameKind; history: Hist
             )}
           </tbody>
         </table>
-      </Card>
-    </section>
+      </TableCard>
+    </CollapsibleSection>
   );
 }
 
@@ -166,19 +165,18 @@ export default async function PlayerPage({ params }: PageProps<"/players/[id]">)
           </div>
         </Stat>
         <Stat label="Overall profit"><Money cents={profit} /></Stat>
-        <Stat label="Cups">{tour.length}</Stat>
+        <Stat label="Tournaments">{tour.length}</Stat>
         <Stat label="Cash games">{cash.length}</Stat>
       </div>
 
       <KindSection kind="CUP" history={tour} opening={0} />
       <KindSection kind="CASH" history={cash} opening={opening} />
 
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Deposits & withdrawals</h2>
+      <CollapsibleSection title="Deposits & withdrawals">
         {player.transactions.length === 0 ? (
           <Card className="text-center text-neutral-500">None yet.</Card>
         ) : (
-          <Card className="overflow-x-auto p-0">
+          <TableCard>
             <table className="w-full text-sm">
               <tbody>
                 {player.transactions.map((t) => (
@@ -193,9 +191,9 @@ export default async function PlayerPage({ params }: PageProps<"/players/[id]">)
                 ))}
               </tbody>
             </table>
-          </Card>
+          </TableCard>
         )}
-      </section>
+      </CollapsibleSection>
     </div>
   );
 }

@@ -15,6 +15,22 @@ export function Card({ className, ...props }: ComponentProps<"div">) {
   );
 }
 
+/** Card for a table that can grow long: scrolls inside after ~12 rows and keeps the header row in view. */
+// Not built on Card: Card's p-5 would win over p-0 (Tailwind orders utilities by its own CSS order, not by
+// class order), and that padding would leave a gap above the sticky header for rows to show through.
+export function TableCard({ className, ...props }: ComponentProps<"div">) {
+  return (
+    <div
+      className={cx(
+        "max-h-[32rem] overflow-auto rounded-xl border border-neutral-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900",
+        "[&_thead]:sticky [&_thead]:top-0 [&_thead]:z-10 [&_thead]:bg-white dark:[&_thead]:bg-neutral-900",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
 export function Button({ className, ...props }: ComponentProps<"button">) {
   return (
     <button

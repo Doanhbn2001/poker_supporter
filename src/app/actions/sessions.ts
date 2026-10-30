@@ -58,7 +58,7 @@ async function parseSessionForm(formData: FormData, type: GameKind): Promise<Par
   // Only cups have a champion; a cash game ignores whatever was sent.
   const championId = type === "CUP" ? String(formData.get("championId") ?? "") || null : null;
   if (championId && !results.some((r) => r.userId === championId)) {
-    return { error: "The champion must be one of the players in this cup." };
+    return { error: "The champion must be one of the players in this tournament." };
   }
 
   // Location isn't in the form; leaving it out keeps any existing value on edit.

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ProgressChart } from "@/components/charts/progress-chart";
+import { CollapsibleSection } from "@/components/collapsible-section";
 import { LeaderboardTabs } from "@/components/leaderboard-tabs";
 import { SessionCard } from "@/components/session-card";
 import { Card } from "@/components/ui";
@@ -21,8 +22,8 @@ export default async function DashboardPage() {
         <p className={me.role === "ADMIN" ? "mb-4" : ""}>No games logged yet.</p>
         {me.role === "ADMIN" && (
           <div className="flex justify-center gap-6">
-            <Link href="/cups/new" className="font-medium text-emerald-600 hover:underline">
-              Log the first cup →
+            <Link href="/tournaments/new" className="font-medium text-emerald-600 hover:underline">
+              Log the first tournament →
             </Link>
             <Link href="/cash/new" className="font-medium text-emerald-600 hover:underline">
               Log the first cash game →
@@ -35,17 +36,15 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      <section>
-        <h2 className="mb-3 text-lg font-semibold">Leaderboard</h2>
+      <CollapsibleSection title="Leaderboard">
         <LeaderboardTabs boards={boards} />
-      </section>
+      </CollapsibleSection>
 
       {[
-        { title: "Tour profit over time", data: tour, empty: "No cups yet." },
+        { title: "Tournament profit over time", data: tour, empty: "No tournaments yet." },
         { title: "Cash profit over time", data: cash, empty: "No cash games yet." },
       ].map(({ title, data, empty }) => (
-        <section key={title}>
-          <h2 className="mb-3 text-lg font-semibold">{title}</h2>
+        <CollapsibleSection key={title} title={title}>
           <Card>
             {data.points.length === 0 ? (
               <p className="text-center text-sm text-neutral-500">{empty}</p>
@@ -53,23 +52,23 @@ export default async function DashboardPage() {
               <ProgressChart points={data.points} players={data.players} order={boards.all.map((p) => p.userId)} />
             )}
           </Card>
-        </section>
+        </CollapsibleSection>
       ))}
 
-      <section>
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Recent games</h2>
-          <span className="flex gap-4 text-sm">
-            <Link href="/cups" className="text-emerald-600 hover:underline">All cups →</Link>
+      <CollapsibleSection
+        title="Recent games"
+        className="space-y-2"
+        actions={
+          <span className="flex gap-4">
+            <Link href="/tournaments" className="text-emerald-600 hover:underline">All tournaments →</Link>
             <Link href="/cash" className="text-emerald-600 hover:underline">All cash games →</Link>
           </span>
-        </div>
-        <div className="space-y-2">
-          {recent.map((s) => (
-            <SessionCard key={s.id} session={s} />
-          ))}
-        </div>
-      </section>
+        }
+      >
+        {recent.map((s) => (
+          <SessionCard key={s.id} session={s} />
+        ))}
+      </CollapsibleSection>
     </div>
   );
 }

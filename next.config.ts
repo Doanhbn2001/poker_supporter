@@ -1,9 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Cups used to live under /sessions; keep old links working.
+  // Tournaments used to live under /sessions, then /cups; keep old links working.
   async redirects() {
-    return [{ source: "/sessions/:path*", destination: "/cups/:path*", permanent: true }];
+    return [
+      { source: "/sessions/:path*", destination: "/tournaments/:path*", permanent: true },
+      { source: "/cups/:path*", destination: "/tournaments/:path*", permanent: true },
+    ];
   },
 };
 

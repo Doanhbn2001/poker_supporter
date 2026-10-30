@@ -5,8 +5,8 @@ import { LeaderboardTable, type LeaderboardVariant } from "@/components/leaderbo
 import type { Leaderboards } from "@/lib/stats";
 
 const TABS: { key: LeaderboardVariant; label: string; hint: string }[] = [
-  { key: "all", label: "Overall", hint: "Cups + cash games. Wallet = profit + deposits − withdrawals." },
-  { key: "tour", label: "Tour", hint: "Cups only." },
+  { key: "all", label: "Overall", hint: "Tournaments + cash games. Wallet = profit + deposits − withdrawals." },
+  { key: "tour", label: "Tournaments", hint: "Tournaments only." },
   { key: "cash", label: "Cash", hint: "Cash games only." },
 ];
 

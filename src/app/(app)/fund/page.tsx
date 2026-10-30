@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { deleteTransaction } from "@/app/actions/fund";
-import { Card, Money } from "@/components/ui";
+import { CollapsibleSection } from "@/components/collapsible-section";
+import { Card, Money, TableCard } from "@/components/ui";
 import { requireUser } from "@/lib/dal";
 import { formatDate } from "@/lib/dates";
 import { formatMoney } from "@/lib/money";
@@ -56,9 +57,8 @@ export default async function FundPage() {
         </Card>
       </div>
 
-      <section>
-        <h2 className="mb-3 text-lg font-semibold">Wallets</h2>
-        <Card className="overflow-x-auto p-0">
+      <CollapsibleSection title="Wallets">
+        <TableCard>
           <table className="w-full text-sm">
             <thead className="text-left text-neutral-500">
               <tr className="border-b border-neutral-200 dark:border-neutral-800">
@@ -86,17 +86,15 @@ export default async function FundPage() {
               })}
             </tbody>
           </table>
-        </Card>
-      </section>
+        </TableCard>
+      </CollapsibleSection>
 
       {isAdmin && (
         <div className="grid gap-6 md:grid-cols-2">
-          <section>
-            <h2 className="mb-3 text-lg font-semibold">Record a deposit or withdrawal</h2>
+          <CollapsibleSection title="Record a deposit or withdrawal">
             <Card><TransactionForm players={players} ids={transactions.map((t) => t.id)} /></Card>
-          </section>
-          <section>
-            <h2 className="mb-3 text-lg font-semibold">Settle everyone</h2>
+          </CollapsibleSection>
+          <CollapsibleSection title="Settle everyone">
             <Card className="space-y-3 text-sm">
               <p lang="vi" className="text-neutral-600 dark:text-neutral-300">
                 Ghi một khoản nạp cho mọi người đang nợ và một khoản rút cho mọi người đang dư, để tất cả ví về 0. Chỉ bấm
@@ -104,16 +102,15 @@ export default async function FundPage() {
               </p>
               <SettleAllForm count={open} />
             </Card>
-          </section>
+          </CollapsibleSection>
         </div>
       )}
 
-      <section>
-        <h2 className="mb-3 text-lg font-semibold">History</h2>
+      <CollapsibleSection title="History">
         {transactions.length === 0 ? (
           <Card lang="vi" className="text-center text-neutral-500">Chưa có khoản nạp/rút nào.</Card>
         ) : (
-          <Card className="overflow-x-auto p-0">
+          <TableCard>
             <table className="w-full text-sm">
               <thead className="text-left text-neutral-500">
                 <tr className="border-b border-neutral-200 dark:border-neutral-800">
@@ -145,9 +142,9 @@ export default async function FundPage() {
                 ))}
               </tbody>
             </table>
-          </Card>
+          </TableCard>
         )}
-      </section>
+      </CollapsibleSection>
     </div>
   );
 }

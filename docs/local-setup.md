@@ -104,11 +104,12 @@ docker rm -f poker-postgres && docker volume rm poker-pgdata
 
 1. Commit + push lên `BMI`. Vercel tự chạy `migrate deploy` khi build, nên schema lên prod trước.
 2. Copy toàn bộ data local lên prod (xoá sạch data prod cũ, chạy trong 1 transaction):
-   ```bash
-    export PROD_DATABASE_URL='<connection string unpooled của Neon>'   # dấu cách đầu dòng: không lưu vào history
-   ./scripts/copy-local-to-prod.sh
-   unset PROD_DATABASE_URL
-   ```
+   - Mở file `.env.prod` (đã gitignore), thay `PROD_DATABASE_URL` bằng connection string thật của Neon
+     (poker-db → Connect → tắt *Connection pooling* → Copy). Giữ nguyên dấu nháy đơn.
+   - Chạy:
+     ```bash
+     ./scripts/copy-local-to-prod.sh
+     ```
    Script dừng nếu migration prod chưa khớp local, in số liệu 2 bên, bắt gõ `yes`, rồi so ví từng người sau khi copy.
 
 **Chỉ làm khi prod chưa có data mới.** Prod đã có người log ván thì đừng chạy lại: mọi thứ trên prod bị thay bằng local.

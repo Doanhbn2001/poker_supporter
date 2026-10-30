@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { CollapsibleSection } from "@/components/collapsible-section";
 import { CardRow } from "@/components/playing-card";
 import { Card } from "@/components/ui";
 import { requireUser } from "@/lib/dal";
@@ -10,19 +11,24 @@ const SECTIONS = [
   { id: "vong-cuoc", title: "4 vòng cược" },
   { id: "thu-tu-bai", title: "Thứ tự bộ bài" },
   { id: "so-bai", title: "So bài khi bằng nhau" },
-  { id: "the-thuc-cup", title: "Thể thức cup" },
+  { id: "the-thuc-tournament", title: "Thể thức tournament" },
   { id: "the-thuc-cash", title: "Thể thức cash game" },
 ];
 
 function Section({ id, children }: { id: string; children: ReactNode }) {
   const i = SECTIONS.findIndex((s) => s.id === id);
   return (
-    <section id={id} className="scroll-mt-6 space-y-3">
-      <h2 className="text-lg font-semibold">
-        <span className="text-neutral-500">{i + 1}.</span> {SECTIONS[i].title}
-      </h2>
+    <CollapsibleSection
+      id={id}
+      className="space-y-3"
+      title={
+        <>
+          <span className="text-neutral-500">{i + 1}.</span> {SECTIONS[i].title}
+        </>
+      }
+    >
       {children}
-    </section>
+    </CollapsibleSection>
   );
 }
 
@@ -64,7 +70,7 @@ export default async function GuidePage() {
     <div lang="vi" className="max-w-4xl space-y-10">
       <div>
         <h1 className="text-xl font-semibold">Hướng dẫn chơi Texas Hold&apos;em</h1>
-        <p className="text-sm text-neutral-500">Từ luật cơ bản đến một ván hoàn chỉnh, có ví dụ bằng bài thật.</p>
+        <p className="text-sm text-neutral-500">Luật chơi, cách so bài và thể thức tournament / cash game, có ví dụ bằng bài thật.</p>
       </div>
 
       <nav className="flex flex-wrap gap-2 text-sm">
@@ -181,10 +187,10 @@ export default async function GuidePage() {
         </div>
       </Section>
 
-      <Section id="the-thuc-cup">
+      <Section id="the-thuc-tournament">
         <Card className="space-y-2 text-sm leading-relaxed">
           <p>
-            Một <b>cup</b> là một giải đấu nhỏ (tournament): mọi người đóng buy-in như nhau, nhận số chip ban đầu như nhau.
+            Một <b>tournament</b> (gọi tắt là <b>tour</b>) là một giải đấu nhỏ: mọi người đóng buy-in như nhau, nhận số chip ban đầu như nhau.
           </p>
           <p>
             Chơi tới khi <b>một người giữ hết chip</b>: người đó là <b>champion 👑</b>. Hết chip là bị loại (tuỳ nhóm có cho
@@ -194,7 +200,7 @@ export default async function GuidePage() {
             <b>Blind tăng dần</b> theo thời gian hoặc số ván (ví dụ 10/20 → 20/40 → 50/100…) để giải không kéo dài mãi.
           </p>
           <p>
-            Tiền thưởng chia theo thứ hạng (vô địch, nhì, ba…). Trong app, lời/lỗ của mỗi người ở một cup được nhập thành
+            Tiền thưởng chia theo thứ hạng (vô địch, nhì, ba…). Trong app, lời/lỗ của mỗi người ở một tour được nhập thành
             buy-in và cash-out, tổng cả bàn luôn bằng 0.
           </p>
         </Card>
@@ -204,7 +210,7 @@ export default async function GuidePage() {
         <Card className="space-y-2 text-sm leading-relaxed">
           <p>
             Trong <b>cash game</b>, chip chính là tiền: mua bao nhiêu chip thì trả bấy nhiêu tiền. <b>Blind cố định</b> cả
-            buổi (ví dụ 10/20), không tăng dần như cup.
+            buổi (ví dụ 10/20), không tăng dần như tournament.
           </p>
           <p>
             <b>Vào và rời bàn lúc nào cũng được.</b> Hết chip hoặc muốn thêm chip thì <b>mua thêm (rebuy / top-up)</b>, thường
@@ -228,7 +234,7 @@ export default async function GuidePage() {
             <thead className="text-left text-neutral-500">
               <tr className="border-b border-neutral-200 dark:border-neutral-800">
                 <th className="px-4 py-2" />
-                <th className="px-4 py-2">Cup (tournament)</th>
+                <th className="px-4 py-2">Tournament</th>
                 <th className="px-4 py-2">Cash game</th>
               </tr>
             </thead>
@@ -240,10 +246,10 @@ export default async function GuidePage() {
                 ["Mua thêm chip", "Tuỳ luật nhóm", "Được, trong mức cho phép"],
                 ["Kết thúc", "Một người giữ hết chip", "Khi mọi người nghỉ"],
                 ["Vô địch / crown", "Có 👑", "Không"],
-              ].map(([k, cup, cash]) => (
+              ].map(([k, tour, cash]) => (
                 <tr key={k} className="border-b border-neutral-100 last:border-0 dark:border-neutral-800">
                   <td className="px-4 py-2 font-semibold">{k}</td>
-                  <td className="px-4 py-2 text-neutral-600 dark:text-neutral-300">{cup}</td>
+                  <td className="px-4 py-2 text-neutral-600 dark:text-neutral-300">{tour}</td>
                   <td className="px-4 py-2 text-neutral-600 dark:text-neutral-300">{cash}</td>
                 </tr>
               ))}

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { deleteGameSession } from "@/app/actions/sessions";
-import { Card, Money } from "@/components/ui";
+import { Money, TableCard } from "@/components/ui";
 import { requireUser } from "@/lib/dal";
 import { formatDate } from "@/lib/dates";
 import { formatMoney } from "@/lib/money";
@@ -64,7 +64,7 @@ export async function GameDetailPage({ id, type }: { id: string; type: GameKind 
         )}
       </div>
 
-      <Card className="overflow-x-auto p-0">
+      <TableCard>
         <table className="w-full text-sm">
           <thead className="text-left text-neutral-500">
             <tr className="border-b border-neutral-200 dark:border-neutral-800">
@@ -97,7 +97,7 @@ export async function GameDetailPage({ id, type }: { id: string; type: GameKind 
             </tr>
           </tfoot>
         </table>
-      </Card>
+      </TableCard>
       {totalOut !== totalIn && (
         <p className="text-sm text-neutral-500">
           Cash-outs and buy-ins differ by {formatMoney(Math.abs(totalOut - totalIn))}, so something may be missing.

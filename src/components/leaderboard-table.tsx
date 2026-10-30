@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Card, Money } from "@/components/ui";
+import { Money, TableCard } from "@/components/ui";
 import type { PlayerStats } from "@/lib/stats";
 
 type SortKey = "name" | "crowns" | "net" | "wallet" | "cups" | "cashGames" | "sessions" | "winRate" | "avg" | "best" | "worst";
@@ -33,7 +33,7 @@ const COL: Record<SortKey, Column> = {
   crowns: { key: "crowns", label: "👑 Crowns", cell: (r) => r.crowns },
   net: { key: "net", label: "Profit", cell: (r) => money(r.net) },
   wallet: { key: "wallet", label: "Wallet", cell: (r) => money(r.wallet) },
-  cups: { key: "cups", label: "Cups", cell: (r) => r.cups },
+  cups: { key: "cups", label: "Tours", cell: (r) => r.cups },
   cashGames: { key: "cashGames", label: "Cash games", cell: (r) => r.cashGames },
   sessions: { key: "sessions", label: "Games", cell: (r) => r.sessions },
   winRate: { key: "winRate", label: "Win rate", cell: (r) => dash(r.winRate, (n) => `${Math.round(n * 100)}%`) },
@@ -42,10 +42,10 @@ const COL: Record<SortKey, Column> = {
   worst: { key: "worst", label: "Worst", cell: (r) => dash(r.worst, money) },
 };
 
-/** Overall shows totals and the wallet; tour and cash show per-game stats of their own games. */
+/** Overall shows totals and the wallet; tournaments (with crowns) and cash show per-game stats of their own games. */
 const COLUMNS: Record<LeaderboardVariant, Column[]> = {
-  all: [COL.name, COL.net, COL.wallet, COL.crowns, COL.cups, COL.cashGames, COL.winRate, COL.avg],
-  tour: [COL.name, COL.crowns, COL.net, { ...COL.sessions, label: "Cups" }, COL.winRate, { ...COL.avg, label: "Avg / cup" }, COL.best, COL.worst],
+  all: [COL.name, COL.net, COL.wallet, COL.cups, COL.cashGames, COL.winRate, COL.avg],
+  tour: [COL.name, COL.crowns, COL.net, { ...COL.sessions, label: "Tours" }, COL.winRate, { ...COL.avg, label: "Avg / tour" }, COL.best, COL.worst],
   cash: [COL.name, COL.net, COL.sessions, COL.winRate, COL.avg, COL.best, COL.worst],
 };
 
@@ -93,7 +93,7 @@ export function LeaderboardTable({ players, variant }: { players: PlayerStats[];
     setSort((s) => (s.key === key ? { key, desc: !s.desc } : { key, desc: key !== "name" }));
 
   return (
-    <Card className="overflow-x-auto p-0">
+    <TableCard>
       <table className="w-full text-sm">
         <thead className="text-left text-neutral-500">
           <tr className="border-b border-neutral-200 dark:border-neutral-800">
@@ -137,6 +137,6 @@ export function LeaderboardTable({ players, variant }: { players: PlayerStats[];
           ))}
         </tbody>
       </table>
-    </Card>
+    </TableCard>
   );
 }

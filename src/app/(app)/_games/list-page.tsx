@@ -23,7 +23,9 @@ export async function GameListPage({ type }: { type: GameKind }) {
       {sessions.length === 0 ? (
         <Card className="text-center text-neutral-500">No {game.plural.toLowerCase()} logged yet.</Card>
       ) : (
-        <div className="space-y-2">
+        // Fills the screen below the title (10.5rem = top bar + title row + page padding) and scrolls inside,
+        // but never shrinks below 20rem on very short screens (the page scrolls a little instead).
+        <div className="max-h-[max(20rem,calc(100dvh_-_10.5rem))] space-y-2 overflow-y-auto pr-1">
           {sessions.map((s) => (
             <SessionCard key={s.id} session={s} />
           ))}

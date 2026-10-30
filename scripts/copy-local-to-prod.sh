@@ -2,14 +2,21 @@
 # Replaces ALL data in the production database with the local database's data (users, games, results,
 # fund transactions). Schema is not touched: deploy the code first so Vercel applies the migrations.
 #
-# Usage (leading space keeps the URL out of shell history):
-#    export PROD_DATABASE_URL='postgresql://...'   # Neon *unpooled* connection string
-#   ./scripts/copy-local-to-prod.sh
-#   unset PROD_DATABASE_URL
+# Usage: put PROD_DATABASE_URL (the Neon *unpooled* connection string) in .env.prod (gitignored),
+# or export it, then run ./scripts/copy-local-to-prod.sh
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-: "${PROD_DATABASE_URL:?Set PROD_DATABASE_URL to the Neon unpooled connection string}"
+# An exported PROD_DATABASE_URL wins over the file.
+if [ -z "${PROD_DATABASE_URL:-}" ] && [ -f .env.prod ]; then
+  set -a; . ./.env.prod; set +a
+fi
+
+: "${PROD_DATABASE_URL:?Put PROD_DATABASE_URL (Neon unpooled connection string) in .env.prod}"
+if [[ "$PROD_DATABASE_URL" == *YOUR_PASSWORD* ]]; then
+  echo "Fill in the real connection string in .env.prod first." >&2
+  exit 1
+fi
 CONTAINER=poker-postgres
 HOST=$(sed -E 's#^[a-z]+://[^@]*@([^/:?]+).*#\1#' <<<"$PROD_DATABASE_URL")
 

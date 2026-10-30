@@ -15,7 +15,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
             ♠ Poker Supporter
           </Link>
           <NavLink href="/" exact>Dashboard</NavLink>
-          <NavLink href="/cups" except={["/cups/new"]}>Cups</NavLink>
+          <NavLink href="/tournaments" except={["/tournaments/new"]}>Tournaments</NavLink>
           <NavLink href="/cash" except={["/cash/new"]}>Cash</NavLink>
           <NavLink href="/fund">Fund</NavLink>
           <NavLink href="/players">Players</NavLink>
@@ -23,8 +23,8 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           <NavLink href="/tips">Tips</NavLink>
           {user.role === "ADMIN" && (
             <>
-              <NavLink href="/cups/new" exact className="font-medium text-emerald-600">
-                + Cup
+              <NavLink href="/tournaments/new" exact className="font-medium text-emerald-600">
+                + Tour
               </NavLink>
               <NavLink href="/cash/new" exact className="font-medium text-emerald-600">
                 + Cash
