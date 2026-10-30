@@ -3,6 +3,7 @@
 import { useActionState, useState, useSyncExternalStore } from "react";
 import type { SessionFormState } from "@/app/actions/sessions";
 import { Button, Card, FormMessage, Input, Label, Money, Select } from "@/components/ui";
+import { defaultGameName, GAME, isDefaultNameForOtherDay, type GameKind } from "@/lib/games";
 import { toCents } from "@/lib/money";
 
 type Player = { id: string; displayName: string };
@@ -19,12 +20,13 @@ export type SessionFormValues = {
 };
 
 type Props = {
+  type: GameKind;
   players: Player[];
   action: (state: SessionFormState, formData: FormData) => Promise<SessionFormState>;
-  /** Existing session when editing; otherwise the form starts with the current user and one empty row. */
+  /** Existing game when editing; otherwise the form starts with two empty rows. */
   initial?: SessionFormValues;
-  /** Sessions already logged per date (YYYY-MM-DD), excluding the one being edited; drives the "Cup N" default. */
-  cupsByDate: Record<string, number>;
+  /** Games of this kind already logged per date (YYYY-MM-DD), excluding the one being edited; drives the default name. */
+  gamesByDate: Record<string, number>;
   defaultPlayerId?: string;
   submitLabel?: string;
 };
@@ -110,14 +112,8 @@ function DateField({ value, onChange }: { value: string; onChange: (v: string) =
   );
 }
 
-export function SessionForm({
-  players,
-  action: submit,
-  initial,
-  cupsByDate,
-  defaultPlayerId = "",
-  submitLabel = "Save session",
-}: Props) {
+export function GameForm({ type, players, action: submit, initial, gamesByDate, defaultPlayerId = "", submitLabel }: Props) {
+  const game = GAME[type];
   const [state, action, pending] = useActionState(submit, undefined);
   const [rows, setRows] = useState<Row[]>(() =>
     initial
@@ -130,12 +126,22 @@ export function SessionForm({
   const [pickedDate, setPickedDate] = useState(initial?.playedAt ?? "");
   const playedAt = pickedDate || today;
   const [champion, setChampion] = useState(initial?.championId ?? "");
-  // Until the name is typed it follows the date: the next free "Cup N" of that day.
-  const [typedCup, setTypedCup] = useState<string | null>(initial?.notes || null);
-  const cupName = typedCup ?? (playedAt ? `Cup ${(cupsByDate[playedAt] ?? 0) + 1}` : "");
+  // Until a name is typed it follows the date ("Cup/Cash YYYY/MM/DD N", next free N). A default name from
+  // another day (e.g. after changing the date while editing) is regenerated too.
+  const [typedName, setTypedName] = useState<string | null>(initial?.notes || null);
+  const followsDate = typedName === null || (playedAt !== "" && isDefaultNameForOtherDay(typedName, playedAt));
+  const name = followsDate
+    ? playedAt
+      ? defaultGameName(type, playedAt, (gamesByDate[playedAt] ?? 0) + 1)
+      : ""
+    : typedName;
 
   const update = (key: number, patch: Partial<Row>) =>
     setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch } : r)));
+
+  // Each player may appear once: options taken by another row are disabled, and any duplicate blocks saving.
+  const chosen = rows.map((r) => r.playerId).filter(Boolean);
+  const hasDuplicate = new Set(chosen).size !== chosen.length;
 
   // The champion must be in the session; if their row goes away the choice falls back to none.
   const inSession = players.filter((p) => rows.some((r) => r.playerId === p.id));
@@ -153,11 +159,11 @@ export function SessionForm({
       <Card className="space-y-4">
         <DateField value={playedAt} onChange={setPickedDate} />
         <div>
-          <Label htmlFor="notes">Cup</Label>
-          <Input id="notes" name="notes" maxLength={40} placeholder="Cup 1" value={cupName}
-            onChange={(e) => setTypedCup(e.target.value)} className="sm:w-52" />
+          <Label htmlFor="notes">Name</Label>
+          <Input id="notes" name="notes" maxLength={40} placeholder={`${game.prefix} 2026/01/31 1`} value={name}
+            onChange={(e) => setTypedName(e.target.value)} className="sm:w-52" />
           <p className="mt-1 text-xs text-neutral-500">
-            Numbered per day by default; left empty it becomes the next cup of that day.
+            Numbered per day by default; left empty it becomes the next {game.noun} of that day.
           </p>
         </div>
       </Card>
@@ -174,7 +180,11 @@ export function SessionForm({
             <Select name="playerId" value={row.playerId} onChange={(e) => update(row.key, { playerId: e.target.value })}>
               <option value="">Choose…</option>
               {players.map((p) => (
-                <option key={p.id} value={p.id}>
+                <option
+                  key={p.id}
+                  value={p.id}
+                  disabled={p.id !== row.playerId && rows.some((r) => r.playerId === p.id)}
+                >
                   {p.displayName}
                 </option>
               ))}
@@ -197,25 +207,28 @@ export function SessionForm({
           Cash-outs minus buy-ins: <Money cents={diff} />
           {diff !== 0 && " — must be 0 before saving"}
         </p>
+        {hasDuplicate && <p className="text-sm text-red-600">A player is listed twice; each player can only appear once.</p>}
       </Card>
 
-      <Card>
-        <Label htmlFor="championId">👑 Champion</Label>
-        <Select id="championId" name="championId" value={championId} onChange={(e) => setChampion(e.target.value)}
-          className="sm:w-64">
-          <option value="">— None —</option>
-          {inSession.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.displayName}
-            </option>
-          ))}
-        </Select>
-        <p className="mt-1 text-xs text-neutral-500">Picking a champion adds a crown to that player.</p>
-      </Card>
+      {type === "CUP" && (
+        <Card>
+          <Label htmlFor="championId">👑 Champion</Label>
+          <Select id="championId" name="championId" value={championId} onChange={(e) => setChampion(e.target.value)}
+            className="sm:w-64">
+            <option value="">— None —</option>
+            {inSession.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.displayName}
+              </option>
+            ))}
+          </Select>
+          <p className="mt-1 text-xs text-neutral-500">Picking a champion adds a crown to that player.</p>
+        </Card>
+      )}
 
       <FormMessage error={state?.error} />
-      <Button type="submit" disabled={pending || diff !== 0}>
-        {pending ? "Saving…" : submitLabel}
+      <Button type="submit" disabled={pending || diff !== 0 || hasDuplicate}>
+        {pending ? "Saving…" : (submitLabel ?? `Save ${game.noun}`)}
       </Button>
     </form>
   );

@@ -1,14 +1,14 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { updateGameSession } from "@/app/actions/sessions";
 import { requireAdmin } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
-import { getCupsByDate } from "@/lib/stats";
-import { SessionForm } from "../../session-form";
+import { GAME, type GameKind } from "@/lib/games";
+import { getGamesByDate } from "@/lib/stats";
+import { GameForm } from "./game-form";
 
 const toInput = (cents: number) => String(cents / 100);
 
-export default async function EditSessionPage({ params }: PageProps<"/sessions/[id]/edit">) {
-  const { id } = await params;
+export async function GameEditPage({ id, type }: { id: string; type: GameKind }) {
   await requireAdmin();
   const [session, players, sameDays] = await Promise.all([
     prisma.gameSession.findUnique({ where: { id }, include: { results: true } }),
@@ -18,18 +18,20 @@ export default async function EditSessionPage({ params }: PageProps<"/sessions/[
       select: { id: true, displayName: true },
       orderBy: { displayName: "asc" },
     }),
-    getCupsByDate(id),
+    getGamesByDate(type, id),
   ]);
   if (!session) notFound();
+  if (session.type !== type) redirect(`${GAME[session.type].base}/${id}/edit`);
 
   return (
     <div className="max-w-3xl">
-      <h1 className="mb-6 text-xl font-semibold">Edit session</h1>
-      <SessionForm
+      <h1 className="mb-6 text-xl font-semibold">Edit {GAME[type].noun}</h1>
+      <GameForm
+        type={type}
         players={players}
         action={updateGameSession.bind(null, id)}
         submitLabel="Save changes"
-        cupsByDate={sameDays}
+        gamesByDate={sameDays}
         initial={{
           playedAt: session.playedAt.toISOString().slice(0, 10),
           notes: session.notes ?? "",

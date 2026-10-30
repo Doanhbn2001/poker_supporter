@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Card, Money } from "@/components/ui";
 import { requireUser } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
-import { getLeaderboard } from "@/lib/stats";
+import { getLeaderboards } from "@/lib/stats";
 import { AddPlayerForm } from "./add-player-form";
 
 export default async function PlayersPage() {
@@ -13,9 +13,9 @@ export default async function PlayersPage() {
       select: { id: true, username: true, displayName: true, crowns: true, _count: { select: { championships: true } } },
       orderBy: { displayName: "asc" },
     }),
-    getLeaderboard(),
+    getLeaderboards(),
   ]);
-  const netById = new Map(leaderboard.map((p) => [p.userId, p]));
+  const netById = new Map(leaderboard.all.map((p) => [p.userId, p]));
   const isAdmin = me.role === "ADMIN";
 
   return (
@@ -44,10 +44,13 @@ export default async function PlayersPage() {
                   {stats ? (
                     <>
                       <Money cents={stats.net} />
-                      <span className="text-neutral-500"> · {stats.sessions} sessions</span>
+                      <span className="text-neutral-500">
+                        {" "}
+                        · {stats.cups} cups · {stats.cashGames} cash
+                      </span>
                     </>
                   ) : (
-                    <span className="text-neutral-500">No sessions yet</span>
+                    <span className="text-neutral-500">No games yet</span>
                   )}
                 </span>
               </Link>

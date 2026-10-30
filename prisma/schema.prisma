@@ -12,6 +12,17 @@ enum Role {
   PLAYER
 }
 
+/// CUP is a tournament (has a champion); CASH is a cash game (no champion).
+enum GameType {
+  CUP
+  CASH
+}
+
+enum TransactionKind {
+  DEPOSIT
+  WITHDRAW
+}
+
 model User {
   id             String   @id @default(cuid())
   username       String   @unique
@@ -23,18 +34,21 @@ model User {
   role           Role     @default(PLAYER)
   /// Titles won before sessions recorded a champion (imported). Total crowns = this + championships.
   crowns         Int      @default(0)
-  /// Profit carried over from before sessions were tracked, in cents. Counts toward net, not per-session stats.
+  /// Cash-game profit carried over from before sessions were tracked, in cents. Counts toward cash profit, not per-session stats.
   openingBalance Int      @default(0)
   createdAt      DateTime @default(now())
 
-  results         Result[]
-  createdSessions GameSession[] @relation("SessionCreator")
-  championships   GameSession[] @relation("SessionChampion")
+  results             Result[]
+  createdSessions     GameSession[] @relation("SessionCreator")
+  championships       GameSession[] @relation("SessionChampion")
+  transactions        Transaction[] @relation("TransactionUser")
+  createdTransactions Transaction[] @relation("TransactionCreator")
 }
 
-/// One night of poker.
+/// One game: a cup (tournament) or a cash game.
 model GameSession {
   id          String   @id @default(cuid())
+  type        GameType @default(CUP)
   playedAt    DateTime @db.Date
   location    String?
   notes       String?
@@ -47,7 +61,7 @@ model GameSession {
   champion  User?    @relation("SessionChampion", fields: [championId], references: [id], onDelete: SetNull)
   results   Result[]
 
-  @@index([playedAt])
+  @@index([type, playedAt])
 }
 
 /// One player's result in one session. Amounts are integer cents; net = cashOut - buyIn.
@@ -63,4 +77,24 @@ model Result {
 
   @@unique([sessionId, userId])
   @@index([userId])
+}
+
+/// Money moved in or out of the group's fund (kept by the treasurer). Not profit: it only changes the wallet.
+/// Wallet (what a player can still withdraw) = profit + deposits - withdrawals.
+model Transaction {
+  id          String          @id @default(cuid())
+  userId      String
+  kind        TransactionKind
+  /// Positive amount in cents.
+  amount      Int
+  happenedAt  DateTime        @db.Date
+  note        String?
+  createdAt   DateTime        @default(now())
+  createdById String
+
+  user      User @relation("TransactionUser", fields: [userId], references: [id])
+  createdBy User @relation("TransactionCreator", fields: [createdById], references: [id])
+
+  @@index([userId])
+  @@index([happenedAt])
 }

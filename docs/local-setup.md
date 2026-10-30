@@ -5,6 +5,13 @@ Cần có: **Node 22+** và **Docker**. Mọi lệnh chạy từ thư mục gố
 ## Mỗi lần ngồi code
 
 ```bash
+./scripts/dev-local.sh        # bật Postgres, migrate + generate + seed, rồi chạy dev server
+./scripts/dev-local.sh -p 3001  # nếu cổng 3000 đang bận
+```
+
+Script tự tạo container `poker-postgres` nếu chưa có (DB mới thì trống, nạp data ở bước 5 phần dưới). Làm tay thì:
+
+```bash
 docker start poker-postgres   # bỏ qua nếu container đã chạy (nó tự bật lại sau reboot)
 npm run dev                   # http://localhost:3000
 ```
@@ -95,14 +102,13 @@ docker rm -f poker-postgres && docker volume rm poker-pgdata
 
 ## Đẩy lên DB thật (Neon / Vercel)
 
-1. Commit + push lên `BMI`. Vercel tự chạy `migrate deploy` khi build, nên mọi migration lên prod trước.
-2. Chạy thử, kiểm tra dòng `Database:` có đúng host Neon:
+1. Commit + push lên `BMI`. Vercel tự chạy `migrate deploy` khi build, nên schema lên prod trước.
+2. Copy toàn bộ data local lên prod (xoá sạch data prod cũ, chạy trong 1 transaction):
    ```bash
-   DATABASE_URL="<DATABASE_URL_UNPOOLED của Neon>" npm run db:import
+    export PROD_DATABASE_URL='<connection string unpooled của Neon>'   # dấu cách đầu dòng: không lưu vào history
+   ./scripts/copy-local-to-prod.sh
+   unset PROD_DATABASE_URL
    ```
-3. Ghi thật:
-   ```bash
-   DATABASE_URL="..." npm run db:import -- --apply
-   ```
+   Script dừng nếu migration prod chưa khớp local, in số liệu 2 bên, bắt gõ `yes`, rồi so ví từng người sau khi copy.
 
-DB prod phải **chưa có session nào**, nếu có thì script tự dừng.
+**Chỉ làm khi prod chưa có data mới.** Prod đã có người log ván thì đừng chạy lại: mọi thứ trên prod bị thay bằng local.

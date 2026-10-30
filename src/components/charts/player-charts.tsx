@@ -18,13 +18,16 @@ import { axisProps, ChartTooltip, moneyTick, shortDate } from "./chart-tooltip";
 /** `x` is the point's position; the axis is keyed by it because sessions can share a date. */
 type Point = { x: number; date: string; label: string; net: number; total: number };
 
+/** Running total, drawn from a "Start" point (the total before the first game) so the line begins at 0. */
 export function CumulativeChart({ data }: { data: Point[] }) {
+  const start = data.length > 0 ? data[0].total - data[0].net : 0;
+  const points: Point[] = [{ x: 0, date: "", label: "Start", net: 0, total: start }, ...data.map((d) => ({ ...d, x: d.x + 1 }))];
   return (
     <div className="h-64">
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data} margin={{ top: 8, right: 16, bottom: 0, left: 8 }}>
+        <LineChart data={points} margin={{ top: 8, right: 16, bottom: 0, left: 8 }}>
           <CartesianGrid vertical={false} stroke="var(--chart-grid)" />
-          <XAxis dataKey="x" tickFormatter={(x: number) => shortDate(data[x]?.date ?? "")} minTickGap={24} {...axisProps} />
+          <XAxis dataKey="x" tickFormatter={(x: number) => (points[x]?.date ? shortDate(points[x].date) : "Start")} minTickGap={24} {...axisProps} />
           <YAxis tickFormatter={moneyTick} width={56} {...axisProps} />
           <ReferenceLine y={0} stroke="var(--chart-axis)" strokeOpacity={0.5} />
           <Tooltip content={<ChartTooltip names={{ total: "Total" }} />} cursor={{ stroke: "var(--chart-axis)", strokeDasharray: "3 3" }} />
@@ -33,7 +36,7 @@ export function CumulativeChart({ data }: { data: Point[] }) {
             type="linear"
             stroke="var(--series-1)"
             strokeWidth={2}
-            dot={data.length <= 30 ? { r: 3, strokeWidth: 0, fill: "var(--series-1)" } : false}
+            dot={points.length <= 30 ? { r: 3, strokeWidth: 0, fill: "var(--series-1)" } : false}
             activeDot={{ r: 5, stroke: "var(--chart-surface)", strokeWidth: 2 }}
             isAnimationActive={false}
           />

@@ -1,15 +1,16 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { deleteGameSession } from "@/app/actions/sessions";
 import { Card, Money } from "@/components/ui";
 import { requireUser } from "@/lib/dal";
 import { formatDate } from "@/lib/dates";
 import { formatMoney } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
-import { DeleteSessionButton } from "./delete-button";
+import { GAME, type GameKind } from "@/lib/games";
+import { DeleteGameButton } from "./delete-button";
 
-export default async function SessionPage({ params }: PageProps<"/sessions/[id]">) {
-  const { id } = await params;
+/** A game's results. Opened under the wrong kind's URL (e.g. /cups/<cash id>), it redirects to the right one. */
+export async function GameDetailPage({ id, type }: { id: string; type: GameKind }) {
   const me = await requireUser();
   const session = await prisma.gameSession.findUnique({
     where: { id },
@@ -20,6 +21,8 @@ export default async function SessionPage({ params }: PageProps<"/sessions/[id]"
     },
   });
   if (!session) notFound();
+  if (session.type !== type) redirect(`${GAME[session.type].base}/${id}`);
+  const game = GAME[type];
 
   const results = session.results
     .map((r) => ({ ...r, net: r.cashOut - r.buyIn }))
@@ -32,14 +35,16 @@ export default async function SessionPage({ params }: PageProps<"/sessions/[id]"
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <Link href="/sessions" className="text-sm text-neutral-500 hover:underline">
-            ← All sessions
+          <Link href={game.base} className="text-sm text-neutral-500 hover:underline">
+            ← All {game.plural.toLowerCase()}
           </Link>
           <h1 className="mt-1 text-xl font-semibold">
-            {formatDate(session.playedAt)}
+            {session.notes ?? formatDate(session.playedAt)}
             {session.location && <span className="text-neutral-500"> · {session.location}</span>}
           </h1>
-          <p className="text-sm text-neutral-500">Logged by {session.createdBy.displayName}</p>
+          <p className="text-sm text-neutral-500">
+            {session.notes && <>{formatDate(session.playedAt)} · </>}Logged by {session.createdBy.displayName}
+          </p>
           {session.champion && (
             <p className="mt-1 text-sm">
               👑 Champion:{" "}
@@ -51,15 +56,13 @@ export default async function SessionPage({ params }: PageProps<"/sessions/[id]"
         </div>
         {canEdit && (
           <div className="flex items-center gap-4 text-sm">
-            <Link href={`/sessions/${id}/edit`} className="font-medium text-emerald-600 hover:underline">
+            <Link href={`${game.base}/${id}/edit`} className="font-medium text-emerald-600 hover:underline">
               Edit
             </Link>
-            <DeleteSessionButton action={deleteGameSession.bind(null, id)} />
+            <DeleteGameButton noun={game.noun} action={deleteGameSession.bind(null, id)} />
           </div>
         )}
       </div>
-
-      {session.notes && <Card className="text-sm">{session.notes}</Card>}
 
       <Card className="overflow-x-auto p-0">
         <table className="w-full text-sm">

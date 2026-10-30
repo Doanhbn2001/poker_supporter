@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Poker Supporter",
-  description: "Track our weekend poker sessions",
+  description: "Track our weekend poker cups",
 };
 
 // Runs before first paint so a saved light theme never flashes dark. Dark is the default.

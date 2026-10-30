@@ -2,7 +2,7 @@
 
 import { useTransition } from "react";
 
-export function DeleteSessionButton({ action }: { action: () => Promise<void> }) {
+export function DeleteGameButton({ noun, action }: { noun: string; action: () => Promise<void> }) {
   const [pending, startTransition] = useTransition();
 
   return (
@@ -11,7 +11,7 @@ export function DeleteSessionButton({ action }: { action: () => Promise<void> })
       disabled={pending}
       className="font-medium text-red-600 hover:underline disabled:opacity-50"
       onClick={() => {
-        if (confirm("Delete this session? This can't be undone.")) startTransition(() => action());
+        if (confirm(`Delete this ${noun}? This can't be undone.`)) startTransition(() => action());
       }}
     >
       {pending ? "Deleting…" : "Delete"}

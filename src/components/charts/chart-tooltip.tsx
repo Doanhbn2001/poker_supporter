@@ -10,7 +10,7 @@ type Entry = {
   payload?: { date?: string; label?: string };
 };
 
-/** Shared tooltip: session date (and label like "Cup 2") on top, then one row per series with a color swatch. */
+/** Shared tooltip: the cup name (or its date when unnamed) on top, then one row per series with a color swatch. */
 export function ChartTooltip({
   active,
   payload,
@@ -27,8 +27,7 @@ export function ChartTooltip({
   return (
     <div className="rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs shadow-md dark:border-neutral-700 dark:bg-neutral-900">
       <div className="mb-1 text-neutral-500">
-        {point?.date && formatDate(new Date(`${point.date}T00:00:00Z`))}
-        {point?.label && ` · ${point.label}`}
+        {point?.label || (point?.date && formatDate(new Date(`${point.date}T00:00:00Z`)))}
       </div>
       {rows.map((p) => (
         <div key={String(p.dataKey)} className="flex items-center gap-2">

@@ -5,13 +5,17 @@ import { useMemo, useState } from "react";
 import { Card, Money } from "@/components/ui";
 import type { PlayerStats } from "@/lib/stats";
 
-type SortKey = "name" | "crowns" | "net" | "sessions" | "winRate" | "avg" | "best" | "worst";
+type SortKey = "name" | "crowns" | "net" | "wallet" | "cups" | "cashGames" | "sessions" | "winRate" | "avg" | "best" | "worst";
 type Row = PlayerStats & { rank: number; winRate: number | null; avg: number | null };
+export type LeaderboardVariant = "all" | "tour" | "cash";
 
 /** Sort value per column; null (no sessions yet) always sorts last. */
 const VALUE: Record<Exclude<SortKey, "name">, (r: Row) => number | null> = {
   crowns: (r) => r.crowns,
   net: (r) => r.net,
+  wallet: (r) => r.wallet,
+  cups: (r) => r.cups,
+  cashGames: (r) => r.cashGames,
   sessions: (r) => r.sessions,
   winRate: (r) => r.winRate,
   avg: (r) => r.avg,
@@ -19,18 +23,31 @@ const VALUE: Record<Exclude<SortKey, "name">, (r: Row) => number | null> = {
   worst: (r) => r.worst,
 };
 
-const COLUMNS: { key: SortKey; label: string }[] = [
-  { key: "name", label: "Player" },
-  { key: "crowns", label: "👑 Crowns" },
-  { key: "net", label: "Net" },
-  { key: "sessions", label: "Sessions" },
-  { key: "winRate", label: "Win rate" },
-  { key: "avg", label: "Avg / session" },
-  { key: "best", label: "Best" },
-  { key: "worst", label: "Worst" },
-];
+type Column = { key: SortKey; label: string; cell: (r: Row) => React.ReactNode };
 
 const dash = (v: number | null, render: (n: number) => React.ReactNode) => (v === null ? "—" : render(v));
+const money = (n: number) => <Money cents={n} />;
+
+const COL: Record<SortKey, Column> = {
+  name: { key: "name", label: "Player", cell: () => null },
+  crowns: { key: "crowns", label: "👑 Crowns", cell: (r) => r.crowns },
+  net: { key: "net", label: "Profit", cell: (r) => money(r.net) },
+  wallet: { key: "wallet", label: "Wallet", cell: (r) => money(r.wallet) },
+  cups: { key: "cups", label: "Cups", cell: (r) => r.cups },
+  cashGames: { key: "cashGames", label: "Cash games", cell: (r) => r.cashGames },
+  sessions: { key: "sessions", label: "Games", cell: (r) => r.sessions },
+  winRate: { key: "winRate", label: "Win rate", cell: (r) => dash(r.winRate, (n) => `${Math.round(n * 100)}%`) },
+  avg: { key: "avg", label: "Avg / game", cell: (r) => dash(r.avg, money) },
+  best: { key: "best", label: "Best", cell: (r) => dash(r.best, money) },
+  worst: { key: "worst", label: "Worst", cell: (r) => dash(r.worst, money) },
+};
+
+/** Overall shows totals and the wallet; tour and cash show per-game stats of their own games. */
+const COLUMNS: Record<LeaderboardVariant, Column[]> = {
+  all: [COL.name, COL.net, COL.wallet, COL.crowns, COL.cups, COL.cashGames, COL.winRate, COL.avg],
+  tour: [COL.name, COL.crowns, COL.net, { ...COL.sessions, label: "Cups" }, COL.winRate, { ...COL.avg, label: "Avg / cup" }, COL.best, COL.worst],
+  cash: [COL.name, COL.net, COL.sessions, COL.winRate, COL.avg, COL.best, COL.worst],
+};
 
 /** Up/down chevrons; the arrow for the current direction is solid, the other faded. */
 function SortIcon({ dir }: { dir: "asc" | "desc" | null }) {
@@ -42,7 +59,8 @@ function SortIcon({ dir }: { dir: "asc" | "desc" | null }) {
   );
 }
 
-export function LeaderboardTable({ players }: { players: PlayerStats[] }) {
+export function LeaderboardTable({ players, variant }: { players: PlayerStats[]; variant: LeaderboardVariant }) {
+  const columns = COLUMNS[variant];
   const [sort, setSort] = useState<{ key: SortKey; desc: boolean }>({ key: "net", desc: true });
 
   // `players` arrives sorted by net, so the index is the rank.
@@ -80,7 +98,7 @@ export function LeaderboardTable({ players }: { players: PlayerStats[] }) {
         <thead className="text-left text-neutral-500">
           <tr className="border-b border-neutral-200 dark:border-neutral-800">
             <th className="px-4 py-2">#</th>
-            {COLUMNS.map((c) => {
+            {columns.map((c) => {
               const active = sort.key === c.key;
               return (
                 <th
@@ -112,13 +130,9 @@ export function LeaderboardTable({ players }: { players: PlayerStats[] }) {
                   {p.displayName}
                 </Link>
               </td>
-              <td className="px-4 py-2 text-right tabular-nums">{p.crowns}</td>
-              <td className="px-4 py-2 text-right"><Money cents={p.net} /></td>
-              <td className="px-4 py-2 text-right">{p.sessions}</td>
-              <td className="px-4 py-2 text-right">{dash(p.winRate, (n) => `${Math.round(n * 100)}%`)}</td>
-              <td className="px-4 py-2 text-right">{dash(p.avg, (n) => <Money cents={n} />)}</td>
-              <td className="px-4 py-2 text-right">{dash(p.best, (n) => <Money cents={n} />)}</td>
-              <td className="px-4 py-2 text-right">{dash(p.worst, (n) => <Money cents={n} />)}</td>
+              {columns.slice(1).map((c) => (
+                <td key={c.key} className="px-4 py-2 text-right tabular-nums">{c.cell(p)}</td>
+              ))}
             </tr>
           ))}
         </tbody>

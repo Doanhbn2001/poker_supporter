@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { logout } from "@/app/actions/auth";
+import { NavLink } from "@/components/nav-link";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { requireUser } from "@/lib/dal";
 
@@ -13,20 +14,28 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           <Link href="/" className="font-semibold">
             ♠ Poker Supporter
           </Link>
-          <Link href="/">Dashboard</Link>
-          <Link href="/sessions">Sessions</Link>
-          <Link href="/players">Players</Link>
-          <Link href="/tips">Tips</Link>
+          <NavLink href="/" exact>Dashboard</NavLink>
+          <NavLink href="/cups" except={["/cups/new"]}>Cups</NavLink>
+          <NavLink href="/cash" except={["/cash/new"]}>Cash</NavLink>
+          <NavLink href="/fund">Fund</NavLink>
+          <NavLink href="/players">Players</NavLink>
+          <NavLink href="/guide">Guide</NavLink>
+          <NavLink href="/tips">Tips</NavLink>
           {user.role === "ADMIN" && (
-            <Link href="/sessions/new" className="font-medium text-emerald-600">
-              + Log session
-            </Link>
+            <>
+              <NavLink href="/cups/new" exact className="font-medium text-emerald-600">
+                + Cup
+              </NavLink>
+              <NavLink href="/cash/new" exact className="font-medium text-emerald-600">
+                + Cash
+              </NavLink>
+            </>
           )}
           <span className="ml-auto flex items-center gap-4">
             <ThemeToggle />
-            <Link href="/account" className="text-neutral-500">
+            <NavLink href="/account" className="text-neutral-500">
               {user.displayName}
-            </Link>
+            </NavLink>
             <form action={logout}>
               <button className="text-neutral-500 hover:underline">Log out</button>
             </form>

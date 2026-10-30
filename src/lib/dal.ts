@@ -13,7 +13,8 @@ export const requireUser = cache(async () => {
     where: { id: session.userId },
     select: { id: true, username: true, displayName: true, role: true },
   });
-  if (!user) redirect("/login");
+  // The cookie is valid but the user is gone (deleted, or the DB was reset): drop the cookie too.
+  if (!user) redirect("/auth/clear");
   return user;
 });
 

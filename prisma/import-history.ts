@@ -5,14 +5,20 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
 
 // One-off import of the group's spreadsheet history (prisma/data/history.json).
-// Dry run by default; pass --apply to write. Refuses to run if any session already exists.
+// Dry run by default; pass --apply to write. Refuses to run if any session or transaction already exists.
 //   npx tsx prisma/import-history.ts [--apply]
 
 type History = {
-  /** openingBalance is the carried-over total from before 26/09, in whole units. */
-  players: { username: string; displayName: string; crowns: number; openingBalance: number }[];
-  /** Results are net amounts in whole units, keyed by username. `champion` is a username, when recorded. */
-  sessions: { date: string; notes: string; champion?: string; results: Record<string, number> }[];
+  /**
+   * Amounts in whole units. openingBalance is cash profit from before tracking started.
+   * wallet is the spreadsheet's running total (what the player can still withdraw); the import
+   * refuses to run unless opening + results + deposits - withdrawals equals it for every player.
+   */
+  players: { username: string; displayName: string; crowns: number; openingBalance: number; wallet: number }[];
+  /** Results are net amounts in whole units, keyed by username. `champion` is a username (cups only). */
+  sessions: { type: "CUP" | "CASH"; date: string; notes: string; champion?: string; results: Record<string, number> }[];
+  /** Money paid into (DEPOSIT) or taken out of (WITHDRAW) the group's fund. */
+  transactions: { date: string; username: string; kind: "DEPOSIT" | "WITHDRAW"; amount: number; note?: string }[];
 };
 
 const DATA_FILE = "prisma/data/history.json";
@@ -33,10 +39,28 @@ async function main() {
     for (const u of Object.keys(s.results)) {
       if (!usernames.has(u)) throw new Error(`${s.date} ${s.notes}: unknown player "${u}"`);
     }
-    if (s.champion && !(s.champion in s.results)) {
-      throw new Error(`${s.date} ${s.notes}: champion "${s.champion}" did not play`);
+    if (s.type !== "CUP" && s.type !== "CASH") throw new Error(`${s.date} ${s.notes}: unknown type "${s.type}"`);
+    if (s.champion && (s.type !== "CUP" || !(s.champion in s.results))) {
+      throw new Error(`${s.date} ${s.notes}: champion "${s.champion}" must be a player in a cup`);
     }
   }
+  for (const t of history.transactions) {
+    if (!usernames.has(t.username)) throw new Error(`Transaction ${t.date}: unknown player "${t.username}"`);
+    if (!(t.amount > 0) || !Number.isInteger(t.amount)) throw new Error(`Transaction ${t.date}: bad amount ${t.amount}`);
+  }
+
+  // The wallet each player can withdraw must come out exactly as in the spreadsheet.
+  const moved = (u: string) =>
+    history.transactions
+      .filter((t) => t.username === u)
+      .reduce((a, t) => a + (t.kind === "DEPOSIT" ? t.amount : -t.amount), 0);
+  const profit = (u: string, type?: "CUP" | "CASH") =>
+    history.sessions.filter((s) => !type || s.type === type).reduce((t, s) => t + (s.results[u] ?? 0), 0);
+  for (const p of history.players) {
+    const wallet = p.openingBalance + profit(p.username) + moved(p.username);
+    if (wallet !== p.wallet) throw new Error(`@${p.username}: wallet ${wallet}, spreadsheet says ${p.wallet}`);
+  }
+  const fund = history.transactions.reduce((a, t) => a + (t.kind === "DEPOSIT" ? t.amount : -t.amount), 0);
 
   const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }) });
   try {
@@ -45,6 +69,8 @@ async function main() {
 
     const existingSessions = await prisma.gameSession.count();
     if (existingSessions > 0) throw new Error(`Database already has ${existingSessions} sessions; aborting.`);
+    const existingTransactions = await prisma.transaction.count();
+    if (existingTransactions > 0) throw new Error(`Database already has ${existingTransactions} transactions; aborting.`);
 
     const admin = await prisma.user.findFirst({ where: { role: "ADMIN" }, orderBy: { createdAt: "asc" } });
     if (!admin) throw new Error("No admin account found; run `npm run db:seed` first.");
@@ -56,16 +82,20 @@ async function main() {
     );
 
     console.log(`Players: ${history.players.length} (${history.players.length - existingUsers.size} new)`);
+    const pad = (n: number) => String(n).padStart(6);
     for (const p of history.players) {
-      const played = history.sessions.filter((s) => p.username in s.results).length;
-      const total = history.sessions.reduce((t, s) => t + (s.results[p.username] ?? 0), p.openingBalance);
-      const tag = existingUsers.has(p.username) ? "exists" : "new";
+      const u = p.username;
+      const played = (type: string) => history.sessions.filter((s) => s.type === type && u in s.results).length;
+      const tag = existingUsers.has(u) ? "exists" : "new";
       console.log(
-        `  ${p.displayName.padEnd(8)} @${p.username.padEnd(7)} opening=${String(p.openingBalance).padStart(6)} ` +
-          `sessions=${String(played).padStart(2)} total=${String(total).padStart(6)} crowns=${p.crowns} (${tag})`,
+        `  ${p.displayName.padEnd(8)} @${u.padEnd(7)} cups=${String(played("CUP")).padStart(2)} tour=${pad(profit(u, "CUP"))} ` +
+          `cash=${String(played("CASH")).padStart(2)} cashProfit=${pad(p.openingBalance + profit(u, "CASH"))} ` +
+          `fund=${pad(moved(u))} wallet=${pad(p.wallet)} ✓ (${tag})`,
       );
     }
-    console.log(`Sessions: ${history.sessions.length}, logged by @${admin.username}`);
+    const count = (type: string) => history.sessions.filter((s) => s.type === type).length;
+    console.log(`Sessions: ${count("CUP")} cups + ${count("CASH")} cash games, logged by @${admin.username}`);
+    console.log(`Transactions: ${history.transactions.length}, fund holds ${fund}`);
 
     if (!apply) {
       console.log("\nDry run, nothing written. Re-run with --apply to import.");
@@ -99,11 +129,12 @@ async function main() {
           created++;
         }
 
-        // createdAt keeps same-day cups in spreadsheet order (Cup 1 before Cup 2).
+        // createdAt keeps same-day games in spreadsheet order (Cup 1 before Cup 2).
         const base = Date.now();
         for (const [i, s] of history.sessions.entries()) {
           await tx.gameSession.create({
             data: {
+              type: s.type,
               playedAt: new Date(`${s.date}T00:00:00Z`),
               notes: s.notes,
               championId: s.champion ? ids.get(s.champion)! : null,
@@ -120,11 +151,25 @@ async function main() {
             },
           });
         }
+
+        for (const [i, t] of history.transactions.entries()) {
+          await tx.transaction.create({
+            data: {
+              userId: ids.get(t.username)!,
+              kind: t.kind,
+              amount: t.amount * 100,
+              happenedAt: new Date(`${t.date}T00:00:00Z`),
+              note: t.note ?? null,
+              createdById: admin.id,
+              createdAt: new Date(base + i * 1000),
+            },
+          });
+        }
       },
       { timeout: 60_000 },
     );
 
-    console.log(`\nImported ${history.sessions.length} sessions.`);
+    console.log(`\nImported ${history.sessions.length} sessions and ${history.transactions.length} transactions.`);
     if (created > 0) console.log(`Created ${created} players with the default password.`);
   } finally {
     await prisma.$disconnect();

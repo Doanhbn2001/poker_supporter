@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/dal";
+import { parseDay } from "@/lib/dates";
+import { defaultGameName, GAME, type GameKind } from "@/lib/games";
 import { formatMoney, toCents } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 
@@ -10,17 +12,17 @@ export type SessionFormState = { error?: string } | undefined;
 
 type ParsedSession = {
   playedAt: Date;
-  /** Cup name; empty means "name it Cup N for that day" (see withCupName). */
+  /** Game name; empty means "name it Cup/Cash YYYY/MM/DD N" (see withGameName). */
   notes: string;
   championId: string | null;
   results: { userId: string; buyIn: number; cashOut: number }[];
 };
 
-async function parseSessionForm(formData: FormData): Promise<ParsedSession | { error: string }> {
-  const playedAt = String(formData.get("playedAt") ?? "");
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(playedAt)) return { error: "Pick a date." };
+async function parseSessionForm(formData: FormData, type: GameKind): Promise<ParsedSession | { error: string }> {
+  const day = parseDay(String(formData.get("playedAt") ?? ""));
+  if (!day) return { error: "Pick a date." };
   const notes = String(formData.get("notes") ?? "").trim();
-  if (notes.length > 40) return { error: "Keep the cup name under 40 characters." };
+  if (notes.length > 40) return { error: "Keep the name under 40 characters." };
 
   // Each row has playerId, buyIn and cashOut; rows without a player are ignored.
   const playerIds = formData.getAll("playerId").map(String);
@@ -30,8 +32,9 @@ async function parseSessionForm(formData: FormData): Promise<ParsedSession | { e
   const results: ParsedSession["results"] = [];
   for (let i = 0; i < playerIds.length; i++) {
     if (!playerIds[i]) continue;
-    const buyIn = toCents(buyIns[i] ?? "");
-    const cashOut = toCents(cashOuts[i] ?? "");
+    // A blank field means 0, as the form's running total assumes (winners usually leave buy-in empty).
+    const buyIn = toCents(buyIns[i]?.trim() || "0");
+    const cashOut = toCents(cashOuts[i]?.trim() || "0");
     if (buyIn === null || cashOut === null) {
       return { error: `Row ${i + 1}: enter buy-in and cash-out as numbers.` };
     }
@@ -52,48 +55,52 @@ async function parseSessionForm(formData: FormData): Promise<ParsedSession | { e
   });
   if (players !== results.length) return { error: "Unknown player selected." };
 
-  const championId = String(formData.get("championId") ?? "") || null;
+  // Only cups have a champion; a cash game ignores whatever was sent.
+  const championId = type === "CUP" ? String(formData.get("championId") ?? "") || null : null;
   if (championId && !results.some((r) => r.userId === championId)) {
-    return { error: "The champion must be one of the players in this session." };
+    return { error: "The champion must be one of the players in this cup." };
   }
 
   // Location isn't in the form; leaving it out keeps any existing value on edit.
-  return { playedAt: new Date(`${playedAt}T00:00:00Z`), notes, championId, results };
+  return { playedAt: day, notes, championId, results };
 }
 
-/** Fills an empty cup name with "Cup N", N counting that day's other sessions. */
-async function withCupName<T extends { playedAt: Date; notes: string }>(fields: T, excludeId?: string) {
+/** Fills an empty name with "Cup/Cash YYYY/MM/DD N", N counting that day's other games of the same kind. */
+async function withGameName<T extends { playedAt: Date; notes: string }>(fields: T, type: GameKind, excludeId?: string) {
   if (fields.notes) return fields;
   const sameDay = await prisma.gameSession.count({
-    where: { playedAt: fields.playedAt, ...(excludeId && { id: { not: excludeId } }) },
+    where: { type, playedAt: fields.playedAt, ...(excludeId && { id: { not: excludeId } }) },
   });
-  return { ...fields, notes: `Cup ${sameDay + 1}` };
+  return { ...fields, notes: defaultGameName(type, fields.playedAt.toISOString().slice(0, 10), sameDay + 1) };
 }
 
-/** Only an admin may change a session; non-admins are redirected by requireAdmin. */
+/** Only an admin may change a game; non-admins are redirected by requireAdmin. */
 async function requireSessionEditor(sessionId: string) {
   const me = await requireAdmin();
-  const session = await prisma.gameSession.findUnique({ where: { id: sessionId }, select: { id: true } });
-  if (!session) return { error: "Session not found." } as const;
-  return { me } as const;
+  const session = await prisma.gameSession.findUnique({ where: { id: sessionId }, select: { type: true } });
+  if (!session) return { error: "Game not found." } as const;
+  return { me, type: session.type } as const;
 }
 
+/** `type` is bound by the page (cups or cash), so the form can't switch it. */
 export async function createGameSession(
+  type: GameKind,
   _state: SessionFormState,
   formData: FormData,
 ): Promise<SessionFormState> {
   const me = await requireAdmin();
+  if (!(type in GAME)) return { error: "Unknown game type." };
 
-  const parsed = await parseSessionForm(formData);
+  const parsed = await parseSessionForm(formData, type);
   if ("error" in parsed) return parsed;
 
   const { results, ...fields } = parsed;
   const session = await prisma.gameSession.create({
-    data: { ...(await withCupName(fields)), createdById: me.id, results: { create: results } },
+    data: { ...(await withGameName(fields, type)), type, createdById: me.id, results: { create: results } },
   });
 
   revalidatePath("/", "layout");
-  redirect(`/sessions/${session.id}`);
+  redirect(`${GAME[type].base}/${session.id}`);
 }
 
 export async function updateGameSession(
@@ -104,11 +111,12 @@ export async function updateGameSession(
   const auth = await requireSessionEditor(sessionId);
   if ("error" in auth) return { error: auth.error };
 
-  const parsed = await parseSessionForm(formData);
+  // A game keeps its kind; turning a cup into a cash game would silently drop its champion.
+  const parsed = await parseSessionForm(formData, auth.type);
   if ("error" in parsed) return parsed;
 
   const { results, ...rest } = parsed;
-  const fields = await withCupName(rest, sessionId);
+  const fields = await withGameName(rest, auth.type, sessionId);
   await prisma.$transaction([
     prisma.result.deleteMany({ where: { sessionId } }),
     prisma.gameSession.update({
@@ -118,7 +126,7 @@ export async function updateGameSession(
   ]);
 
   revalidatePath("/", "layout");
-  redirect(`/sessions/${sessionId}`);
+  redirect(`${GAME[auth.type].base}/${sessionId}`);
 }
 
 export async function deleteGameSession(sessionId: string) {
@@ -127,5 +135,5 @@ export async function deleteGameSession(sessionId: string) {
 
   await prisma.gameSession.delete({ where: { id: sessionId } });
   revalidatePath("/", "layout");
-  redirect("/sessions");
+  redirect(GAME[auth.type].base);
 }
