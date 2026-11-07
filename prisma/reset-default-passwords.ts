@@ -44,7 +44,7 @@ async function main() {
     await prisma.$transaction(
       rows.map((r) => prisma.user.update({ where: { id: r.id }, data: { passwordHash: bcrypt.hashSync(r.password, 10) } })),
     );
-    console.log("\nNew passwords (send each one privately; players can change it on /account):\n");
+    console.log("\nNew passwords (send each one privately; players can change it under Account settings on their own player page):\n");
     for (const r of rows) console.log(`  ${r.displayName.padEnd(10)} username: ${r.username.padEnd(8)} password: ${r.password}`);
   } finally {
     await prisma.$disconnect();

@@ -123,11 +123,11 @@ Vào trang sửa khi không có quyền → bị chuyển về trang chi tiết 
 - **History**: bảng mới nhất trước — `Date` (link tới session) · địa điểm, `Buy-in`, `Cash-out`, `Net`, `Running total`.
 - Player không tồn tại → 404.
 
-## 10. Tài khoản — `/account`
+## 10. Tài khoản — mục `Account settings` trên hồ sơ của chính mình
 
-Vào bằng cách bấm tên mình trên top bar.
+Bấm tên mình trên top bar → mở hồ sơ của mình (`/players/[id]`). Nút `Edit profile` cạnh tên nhảy tới mục **Account settings** (`#account`) ở cuối trang; mục này chỉ hiện khi xem hồ sơ của chính mình (admin cũng không sửa được người khác). `/account` cũ chuyển hướng về đây.
 
-- Hiển thị tên + `@username`.
+- Form **Profile**: `Poker name` (≤ 40 ký tự), `Playing motto` (≤ 160 ký tự, tuỳ chọn).
 - Form **Change password**: `Current password`, `New password` (≥ 8 ký tự).
 - Lỗi: `Enter your current password.`, `New password must be at least 8 characters.`, `Current password is wrong.`
 - Thành công: `Password changed.` và form reset.

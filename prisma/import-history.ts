@@ -22,7 +22,7 @@ type History = {
 };
 
 const DATA_FILE = "prisma/data/history.json";
-/** Players created by the import start with this password (from the env); they change it on /account. */
+/** Players created by the import start with this password (from the env); they change it under "Account settings" on their own player page. */
 const DEFAULT_PASSWORD = process.env.IMPORT_DEFAULT_PASSWORD ?? "";
 const apply = process.argv.includes("--apply");
 

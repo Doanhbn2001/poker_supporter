@@ -9,6 +9,8 @@ import { GAME, type GameKind } from "@/lib/games";
 import { formatMoney } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 import { getPlayerHistory, statsFromHistory } from "@/lib/stats";
+import { ChangePasswordForm } from "./change-password-form";
+import { ProfileForm } from "./profile-form";
 
 function Stat({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -120,7 +122,7 @@ function KindSection({ kind, history, opening }: { kind: GameKind; history: Hist
 
 export default async function PlayerPage({ params }: PageProps<"/players/[id]">) {
   const { id } = await params;
-  await requireUser();
+  const me = await requireUser();
   const player = await prisma.user.findUnique({
     where: { id },
     select: {
@@ -142,19 +144,30 @@ export default async function PlayerPage({ params }: PageProps<"/players/[id]">)
   const profit = opening + [...tour, ...cash].reduce((t, h) => t + h.net, 0);
   const fund = player.transactions.reduce((t, x) => t + (x.kind === "DEPOSIT" ? x.amount : -x.amount), 0);
   const wallet = profit + fund;
+  const isMe = me.id === id;
 
   return (
     <div className="space-y-8">
-      <div>
-        <Link href="/players" className="text-sm text-neutral-500 hover:underline">
-          ← All players
-        </Link>
-        <h1 className="mt-1 text-xl font-semibold">{player.displayName}</h1>
-        <p className="text-sm text-neutral-500">
-          @{player.username}
-          {crowns > 0 && ` · 👑 ${crowns} crown${crowns > 1 ? "s" : ""}`}
-        </p>
-        {player.motto && <p className="mt-2 text-sm italic text-neutral-600 dark:text-neutral-300">“{player.motto}”</p>}
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <Link href="/players" className="text-sm text-neutral-500 hover:underline">
+            ← All players
+          </Link>
+          <h1 className="mt-1 text-xl font-semibold">{player.displayName}</h1>
+          <p className="text-sm text-neutral-500">
+            @{player.username}
+            {crowns > 0 && ` · 👑 ${crowns} crown${crowns > 1 ? "s" : ""}`}
+          </p>
+          {player.motto && <p className="mt-2 text-sm italic text-neutral-600 dark:text-neutral-300">“{player.motto}”</p>}
+        </div>
+        {isMe && (
+          <a
+            href="#account"
+            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+          >
+            Edit profile
+          </a>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -194,6 +207,19 @@ export default async function PlayerPage({ params }: PageProps<"/players/[id]">)
           </TableCard>
         )}
       </CollapsibleSection>
+
+      {isMe && (
+        <CollapsibleSection title="Account settings" id="account" className="grid gap-4 sm:grid-cols-2">
+          <Card>
+            <h3 className="mb-4 font-semibold">Profile</h3>
+            <ProfileForm displayName={player.displayName} motto={player.motto ?? ""} />
+          </Card>
+          <Card>
+            <h3 className="mb-4 font-semibold">Change password</h3>
+            <ChangePasswordForm />
+          </Card>
+        </CollapsibleSection>
+      )}
     </div>
   );
 }

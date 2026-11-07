@@ -18,7 +18,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           <NavLink href="/tournaments" except={["/tournaments/new"]}>Tournaments</NavLink>
           <NavLink href="/cash" except={["/cash/new"]}>Cash</NavLink>
           <NavLink href="/fund">Fund</NavLink>
-          <NavLink href="/players">Players</NavLink>
+          <NavLink href="/players" except={[`/players/${user.id}`]}>Players</NavLink>
           <NavLink href="/guide">Guide</NavLink>
           <NavLink href="/tips">Tips</NavLink>
           {user.role === "ADMIN" && (
@@ -33,7 +33,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           )}
           <span className="ml-auto flex items-center gap-4">
             <ThemeToggle />
-            <NavLink href="/account" className="text-neutral-500">
+            <NavLink href={`/players/${user.id}`} className="text-neutral-500">
               {user.displayName}
             </NavLink>
             <form action={logout}>
