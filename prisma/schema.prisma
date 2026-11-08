@@ -43,6 +43,9 @@ model User {
   championships       GameSession[] @relation("SessionChampion")
   transactions        Transaction[] @relation("TransactionUser")
   createdTransactions Transaction[] @relation("TransactionCreator")
+  pokerNowAliases     PokerNowAlias[]
+  heroHandLogs        HandLog[]     @relation("HandLogHero")
+  uploadedHandLogs    HandLog[]     @relation("HandLogUploader")
 }
 
 /// One game: a cup (tournament) or a cash game.
@@ -60,6 +63,7 @@ model GameSession {
   createdBy User     @relation("SessionCreator", fields: [createdById], references: [id])
   champion  User?    @relation("SessionChampion", fields: [championId], references: [id], onDelete: SetNull)
   results   Result[]
+  handLog   HandLog?
 
   @@index([type, playedAt])
 }
@@ -97,4 +101,58 @@ model Transaction {
 
   @@index([userId])
   @@index([happenedAt])
+}
+
+/// A Poker Now account (the id after " @ " in the log) linked to a player, remembered for later imports.
+model PokerNowAlias {
+  pokerNowId String @id
+  userId     String
+  /// Name the account used in the latest imported log.
+  lastName   String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// A Poker Now hand log imported into a game (one per game; importing again replaces it).
+model HandLog {
+  id             String   @id @default(cuid())
+  sessionId      String   @unique
+  /// Poker Now id of whoever downloaded the log: their hole cards appear in every hand (Hand.heroCards).
+  heroPokerNowId String?
+  /// The player behind heroPokerNowId. Only they and admins may see Hand.heroCards.
+  heroUserId     String?
+  /// Every Poker Now player in the log: { [pokerNowId]: { name, userId | null } }.
+  players        Json
+  /// Playing-style counters per Poker Now id (src/lib/pokernow/stats.ts PlayStats), computed on import.
+  stats          Json?
+  uploadedById   String
+  createdAt      DateTime @default(now())
+
+  session    GameSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  heroUser   User?       @relation("HandLogHero", fields: [heroUserId], references: [id], onDelete: SetNull)
+  uploadedBy User        @relation("HandLogUploader", fields: [uploadedById], references: [id])
+  hands      Hand[]
+}
+
+/// One hand from a HandLog. Chip amounts, not cents.
+model Hand {
+  id         String   @id @default(cuid())
+  logId      String
+  number     Int
+  /// Poker Now's hand id; unique so the same log can't be imported into two games.
+  pokerNowId String   @unique
+  startedAt  DateTime
+  /// Total chips collected.
+  pot        Int
+  showdown   Boolean
+  /// The log owner's hole cards, kept out of `data` so pages can leave them out for other viewers.
+  heroCards  String[]
+  /// The parsed hand (src/lib/pokernow/parse.ts ParsedHand) without heroCards.
+  data       Json
+
+  log HandLog @relation(fields: [logId], references: [id], onDelete: Cascade)
+
+  @@unique([logId, number])
 }

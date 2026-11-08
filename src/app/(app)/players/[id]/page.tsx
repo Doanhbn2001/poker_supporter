@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CumulativeChart, SessionResultsChart } from "@/components/charts/player-charts";
 import { CollapsibleSection } from "@/components/collapsible-section";
+import { PlayInsights, PlayStatsTable } from "@/components/play-stats";
 import { Card, Money, TableCard } from "@/components/ui";
 import { requireUser } from "@/lib/dal";
 import { formatDate } from "@/lib/dates";
@@ -9,6 +10,7 @@ import { GAME, type GameKind } from "@/lib/games";
 import { formatMoney } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 import { getPlayerHistory, statsFromHistory } from "@/lib/stats";
+import { getPlayerPlayStats } from "@/lib/hands";
 import { ChangePasswordForm } from "./change-password-form";
 import { ProfileForm } from "./profile-form";
 
@@ -139,7 +141,11 @@ export default async function PlayerPage({ params }: PageProps<"/players/[id]">)
 
   const opening = player.openingBalance;
   const crowns = player.crowns + player._count.championships;
-  const [tour, cash] = await Promise.all([getPlayerHistory(id, "CUP"), getPlayerHistory(id, "CASH", opening)]);
+  const [tour, cash, play] = await Promise.all([
+    getPlayerHistory(id, "CUP"),
+    getPlayerHistory(id, "CASH", opening),
+    getPlayerPlayStats(id),
+  ]);
 
   const profit = opening + [...tour, ...cash].reduce((t, h) => t + h.net, 0);
   const fund = player.transactions.reduce((t, x) => t + (x.kind === "DEPOSIT" ? x.amount : -x.amount), 0);
@@ -181,6 +187,16 @@ export default async function PlayerPage({ params }: PageProps<"/players/[id]">)
         <Stat label="Tournaments">{tour.length}</Stat>
         <Stat label="Cash games">{cash.length}</Stat>
       </div>
+
+      {play.games > 0 && (
+        <CollapsibleSection title="Playing style" className="space-y-4">
+          <p className="text-sm text-neutral-500">
+            From {play.stats.hands} hands in {play.games} game{play.games > 1 ? "s" : ""} imported from Poker Now.
+          </p>
+          <PlayStatsTable rows={[{ id, name: player.displayName, stats: play.stats }]} />
+          <PlayInsights rows={[{ id, name: player.displayName, stats: play.stats }]} />
+        </CollapsibleSection>
+      )}
 
       <KindSection kind="CUP" history={tour} opening={0} />
       <KindSection kind="CASH" history={cash} opening={opening} />
