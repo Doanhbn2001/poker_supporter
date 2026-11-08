@@ -1,8 +1,9 @@
 const RED_SUITS = new Set(["♥", "♦"]);
 
-/** One card written as rank + suit, e.g. "A♠", "10♥". "?" draws a face-down card. */
-export function PlayingCard({ card, dim = false }: { card: string; dim?: boolean }) {
-  const base = "inline-flex h-12 w-9 shrink-0 flex-col items-center justify-center rounded-md border text-sm font-semibold leading-none shadow-sm";
+/** One card written as rank + suit, e.g. "A♠", "10♥". "?" draws a face-down card. `small` fits table rows. */
+export function PlayingCard({ card, dim = false, small = false }: { card: string; dim?: boolean; small?: boolean }) {
+  const size = small ? "h-8 w-6 rounded text-xs" : "h-12 w-9 rounded-md text-sm";
+  const base = `inline-flex ${size} shrink-0 flex-col items-center justify-center border font-semibold leading-none shadow-sm`;
   if (card === "?") {
     return (
       <span
@@ -22,17 +23,17 @@ export function PlayingCard({ card, dim = false }: { card: string; dim?: boolean
       }`}
     >
       <span>{rank}</span>
-      <span className="mt-0.5">{suit}</span>
+      <span className={small ? "" : "mt-0.5"}>{suit}</span>
     </span>
   );
 }
 
 /** A row of cards; cards listed in `dim` are shown faded (not part of the best five). */
-export function CardRow({ cards, dim = [] }: { cards: string[]; dim?: string[] }) {
+export function CardRow({ cards, dim = [], small = false }: { cards: string[]; dim?: string[]; small?: boolean }) {
   return (
-    <span className="inline-flex flex-wrap gap-1">
+    <span className={`inline-flex flex-wrap ${small ? "gap-0.5" : "gap-1"}`}>
       {cards.map((c, i) => (
-        <PlayingCard key={`${c}-${i}`} card={c} dim={dim.includes(c)} />
+        <PlayingCard key={`${c}-${i}`} card={c} dim={dim.includes(c)} small={small} />
       ))}
     </span>
   );

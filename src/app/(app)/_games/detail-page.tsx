@@ -18,6 +18,7 @@ export async function GameDetailPage({ id, type }: { id: string; type: GameKind 
       createdBy: { select: { displayName: true } },
       champion: { select: { id: true, displayName: true } },
       results: { include: { user: { select: { id: true, displayName: true } } } },
+      handLog: { select: { _count: { select: { hands: true } } } },
     },
   });
   if (!session) notFound();
@@ -98,6 +99,23 @@ export async function GameDetailPage({ id, type }: { id: string; type: GameKind 
           </tfoot>
         </table>
       </TableCard>
+      {(session.handLog || canEdit) && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
+          {session.handLog ? (
+            <Link href={`${game.base}/${id}/hands`} className="font-medium text-emerald-600 hover:underline">
+              🃏 Review {session.handLog._count.hands} hands →
+            </Link>
+          ) : (
+            <span className="text-neutral-500">No Poker Now hand log yet.</span>
+          )}
+          {canEdit && (
+            <Link href={`${game.base}/${id}/hands/import`} className="font-medium text-emerald-600 hover:underline">
+              {session.handLog ? "Re-import log" : "Import Poker Now log"}
+            </Link>
+          )}
+        </div>
+      )}
+
       {totalOut !== totalIn && (
         <p className="text-sm text-neutral-500">
           Cash-outs and buy-ins differ by {formatMoney(Math.abs(totalOut - totalIn))}, so something may be missing.

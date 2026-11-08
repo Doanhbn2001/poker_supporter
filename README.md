@@ -47,6 +47,7 @@ There is no public sign-up. The admin adds friends on the **Players** page with 
 | `npm run db:seed` | Create the admin account from `.env` |
 | `npm run db:seed-demo` | Fill an empty database with fake players and games |
 | `npm run db:studio` | Browse the database in Prisma Studio |
+| `npm run hands:check -- log.csv` | Parse a Poker Now log and report what an import would see |
 
 ## Deploying to Vercel
 
@@ -61,3 +62,10 @@ Vercel runs `npm run vercel-build`, which applies migrations and creates the adm
 - `User`: username, display name, password hash, role (`ADMIN` or `PLAYER`)
 - `GameSession`: date, optional location and notes
 - `Result`: one player's buy-in and cash-out in one session. Amounts are integer cents, and net profit is `cashOut - buyIn`.
+- `HandLog` / `Hand`: a Poker Now hand log imported into a game, one row per hand (chip amounts). `PokerNowAlias` links Poker Now accounts to players.
+
+## Hand review
+
+On a game's page, an admin can **Import Poker Now log**: in Poker Now, open the log and download the full CSV, then pick it, check which Poker Now player is which app player, and import. Everyone can then replay each hand step by step. The log contains the hole cards of whoever downloaded it in every hand; only that player and admins see them.
+
+To help players improve, the hands page also shows each player's playing-style stats (VPIP, PFR, 3-bet, AF, WTSD, W$SD, bb/100) with notes on likely leaks, filters for hands worth reviewing (biggest pots, all-ins, showdowns, your biggest losses), and the replayer shows pot odds on every call or fold plus each player's chance to win whenever the cards are known. Stats add up across games on each player's page.
